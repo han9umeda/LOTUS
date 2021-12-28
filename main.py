@@ -40,14 +40,24 @@ class AS_class:
   def __init__(self, asn, address):
     self.as_number = asn
     self.network_address = address
-    self.routing_table = {}
+    self.routing_table = Routing_table()
     self.policy = []
 
   def show_info(self):
     print(self.as_number)
     print(self.network_address)
-    print(self.routing_table)
+    print(self.routing_table.get_table())
     print(self.policy)
+
+class Routing_table:
+  def __init__(self):
+    self.table = {}
+
+  def update(self, update_message):
+    table[update_message["network"]] = update_message["path"]
+
+  def get_table(self):
+    return self.table
 
 class Interpreter(Cmd):
   def __init__(self):
