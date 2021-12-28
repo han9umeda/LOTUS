@@ -18,6 +18,14 @@ class Interpreter(Cmd):
   def do_exit(self, line):
     return True
 
+  def do_addAS(self, line):
+    as_class_list.add_AS(line)
+
+  def do_showASList(self, line):
+    print(as_class_list.get_AS_list())
+
+as_class_list = AS_class_list()
+
 try:
   Interpreter().cmdloop()
 except KeyboardInterrupt:
