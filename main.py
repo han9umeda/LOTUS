@@ -58,7 +58,10 @@ class Interpreter(Cmd):
     return True
 
   def do_addAS(self, line):
-    self.as_class_list.add_AS(line)
+    if line.isdecimal():
+      self.as_class_list.add_AS(line)
+    else:
+      print("Error: Unknown Syntax", file=sys.stderr)
 
   def do_showASList(self, line):
     if line:
