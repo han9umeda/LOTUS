@@ -192,17 +192,22 @@ class Interpreter(Cmd):
     for c in self.connection_list:
       print(c)
 
+  def get_connection_with(self, as_number):
+    c_list = []
+    for c in self.connection_list:
+      if as_number in [c["src"], c["dst"]]:
+        c_list.append(c)
+    return c_list
+
   def do_run(self, line):
     while not self.message_queue.empty():
       m = self.message_queue.get()
       if m["type"] == "update":
         as_class = self.as_class_list.get_AS(m["dst"])
 
+        # search src-dst connection
+        connection_with_dst = self.get_connection_with(m["dst"])
         connection = None
-        connection_with_dst = []
-        for c in self.connection_list: # search src-dst connection
-          if m["dst"] in [c["src"], c["dst"]]:
-            connection_with_dst.append(c)
         for c in connection_with_dst:
           if m["src"] in [c["src"], c["dst"]]:
             connection = c
@@ -229,8 +234,6 @@ class Interpreter(Cmd):
             tmp = [c["src"], c["dst"]]
             tmp.remove(m["dst"])
             new_update_message["dst"] = tmp[0]
-            print("DEBUG")
-            print(new_update_message)
             self.message_queue.put(new_update_message)
         elif route_diff["come_from"] == "peer" or route_diff["come_from"] == "provider":
           for c in connection_with_dst:
@@ -241,8 +244,6 @@ class Interpreter(Cmd):
               new_update_message["dst"] = c["dst"]
               new_update_message["path"] = route_diff["path"]
               new_update_message["network"] = route_diff["network"]
-              print("DEBUG")
-              print(new_update_message)
               self.message_queue.put(new_update_message)
         print("DEBUG Queue")
         tmp_queue = queue.Queue()
