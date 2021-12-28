@@ -118,6 +118,10 @@ class Interpreter(Cmd):
     for c in self.connection_list:
       print(c)
 
+  def do_run(self, line):
+    while not self.message_queue.empty():
+      print(self.message_queue.get())
+
 
 ###
 ### MAIN PROGRAM
