@@ -24,6 +24,9 @@ class AS_class_list:
       for c in self.class_list.values():
         c.show_info()
 
+  def get_AS(self, as_number):
+    return self.class_list[as_number]
+
 class IP_address_generator:
   def __init__(self):
     self.index = 1 # To generate unique address
@@ -120,7 +123,10 @@ class Interpreter(Cmd):
 
   def do_run(self, line):
     while not self.message_queue.empty():
-      print(self.message_queue.get())
+      m = self.message_queue.get()
+      if m["type"] == "update":
+        as_class = self.as_class_list.get_AS(m["dst"])
+        as_class.show_info()
 
 
 ###
