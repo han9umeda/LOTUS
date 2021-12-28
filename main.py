@@ -51,6 +51,7 @@ class Interpreter(Cmd):
     super().__init__()
     self.as_class_list = AS_class_list()
     self.message_queue = queue.Queue()
+    self.connection_list = []
 
   intro = "=== This is ASPA simulator. ==="
   prompt = "aspa_simulation >> "
@@ -95,6 +96,25 @@ class Interpreter(Cmd):
       print(q)
       tmp_queue.put(q)
     self.message_queue = tmp_queue
+
+  def do_addConnection(self, line):
+    try:
+      param = line.split()
+      if len(param) == 3 and param[1].isdecimal() and param[2].isdecimal():
+        if param[0] == "peer":
+          self.connection_list.append({"type": "peer", "src": param[1], "dst": param[2]})
+        elif param[0] == "down":
+          self.connection_list.append({"type": "down", "src": param[1], "dst": param[2]})
+        else:
+          raise Exception
+      else:
+        raise Exception
+    except Exception:
+      print("Error: Unknown Syntax", file=sys.stderr)
+
+  def do_showConnection(self, line):
+    for c in self.connection_list:
+      print(c)
 
 
 ###
