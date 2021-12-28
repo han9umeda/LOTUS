@@ -57,7 +57,21 @@ class Routing_table:
     self.table = {}
 
   def update(self, update_message):
-    self.table[update_message["network"]] = update_message["path"]
+    network = update_message["network"]
+    path = update_message["path"]
+    come_from = update_message["come_from"]
+
+    if come_from == "peer":
+      locpref = 100
+    elif come_from == "provider":
+      locpref = 50
+    elif come_from == "customer":
+      locpref = 200
+
+    try:
+      self.table[network].append({"path": path, "come_from": come_from, "LocPrf": locpref, "best_path": False})
+    except KeyError:
+      self.table[network] = [{"path": path, "come_from": come_from, "LocPrf": locpref, "best_path": True}]
 
   def get_table(self):
     return self.table
