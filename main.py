@@ -12,9 +12,15 @@ class AS_class_list:
     else:
       print("Error: AS " + str(as_number) + " is already registered.", file=sys.stderr)
 
-  def show_AS_list(self):
-    for c in self.class_list.values():
-      c.show_info()
+  def show_AS_list(self, mode=""):
+    if mode == "sort":
+      keys = list(self.class_list.keys())
+      keys.sort()
+      for k in keys:
+        self.class_list[k].show_info()
+    else:
+      for c in self.class_list.values():
+        c.show_info()
 
 class IP_address_generator:
   def __init__(self):
@@ -49,7 +55,13 @@ class Interpreter(Cmd):
     as_class_list.add_AS(line)
 
   def do_showASList(self, line):
-    as_class_list.show_AS_list()
+    if line:
+      if line == "sort":
+        as_class_list.show_AS_list("sort")
+      else:
+        print("Error: Unknown Syntax", file=sys.stderr)
+    else:
+      as_class_list.show_AS_list()
 
 as_class_list = AS_class_list()
 
