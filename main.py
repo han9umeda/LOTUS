@@ -1,5 +1,6 @@
 import sys
 from cmd import Cmd
+import queue
 
 class AS_class_list:
   def __init__(self):
@@ -45,6 +46,11 @@ class AS_class:
     print(self.policy)
 
 class Interpreter(Cmd):
+  def __init__(self):
+    super().__init__()
+    self.as_class_list = AS_class_list()
+    self.message_queue = queue.Queue()
+
   intro = "=== This is ASPA simulator. ==="
   prompt = "aspa_simulation >> "
 
@@ -52,18 +58,33 @@ class Interpreter(Cmd):
     return True
 
   def do_addAS(self, line):
-    as_class_list.add_AS(line)
+    self.as_class_list.add_AS(line)
 
   def do_showASList(self, line):
     if line:
       if line == "sort":
-        as_class_list.show_AS_list("sort")
+        self.as_class_list.show_AS_list("sort")
       else:
         print("Error: Unknown Syntax", file=sys.stderr)
     else:
-      as_class_list.show_AS_list()
+      self.as_class_list.show_AS_list()
 
-as_class_list = AS_class_list()
+  def do_registerMessage(self, line):
+    self.message_queue.put(line)
+
+  def do_showMessage(self, line):
+    tmp_queue = queue.Queue()
+    while not self.message_queue.empty():
+      q = self.message_queue.get()
+      print(q)
+      tmp_queue.put(q)
+    self.message_queue = tmp_queue
+
+
+###
+### MAIN PROGRAM
+###
+
 
 try:
   Interpreter().cmdloop()
