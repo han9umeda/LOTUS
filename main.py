@@ -50,6 +50,8 @@ class AS_class:
     print(self.policy)
 
   def update(self, update_message):
+    if self.as_number in update_message["path"].split("-"):
+      return
     self.routing_table.update(update_message)
 
 class Routing_table:
