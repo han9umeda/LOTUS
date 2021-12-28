@@ -53,13 +53,13 @@ class AS_class:
     if self.as_number in update_message["path"].split("-"):
       return
 
-    update = self.routing_table.update(update_message)
-    if update == None:
+    route_diff = self.routing_table.update(update_message)
+    if route_diff == None:
       return
-    print("DEBUG")
-    print(update)
-    update["path"] = str(self.as_number) + "-" + update["path"]
-    print(update)
+    else:
+      route_diff["path"] = str(self.as_number) + "-" + route_diff["path"]
+      print(route_diff)
+      return route_diff
 
 class Routing_table:
   def __init__(self, policy):
@@ -215,7 +215,30 @@ class Interpreter(Cmd):
           elif m["src"] == connection["dst"]:
             m["come_from"] = "customer"
 
-        as_class.update(m)
+        route_diff = as_class.update(m)
+        if route_diff == None:
+          continue
+        if route_diff["come_from"] == "customer":
+          for c in connection_with_dst:
+            new_update_message = {}
+            new_update_message["src"] = m["dst"]
+            new_update_message["path"] = route_diff["path"]
+            new_update_message["network"] = route_diff["network"]
+            tmp = [c["src"], c["dst"]]
+            tmp.remove(m["dst"])
+            new_update_message["dst"] = tmp[0]
+            print("DEBUG")
+            print(new_update_message)
+        else:
+          for c in connection_with_dst:
+            if c["type"] == "down" and c["src"] == m["dst"]:
+              new_update_message = {}
+              new_update_message["src"] = m["dst"]
+              new_update_message["dst"] = c["dst"]
+              new_update_message["path"] = route_diff["path"]
+              new_update_message["network"] = route_diff["network"]
+              print("DEBUG")
+              print(new_update_message)
 
 
 ###
