@@ -1,3 +1,4 @@
+import sys
 from cmd import Cmd
 
 class AS_class_list:
@@ -6,7 +7,10 @@ class AS_class_list:
     self.ip_gen = IP_address_generator()
 
   def add_AS(self, as_number):
-    self.class_list[as_number] = AS_class(as_number, self.ip_gen.get_unique_address())
+    if not as_number in self.class_list.keys():
+      self.class_list[as_number] = AS_class(as_number, self.ip_gen.get_unique_address())
+    else:
+      print("Error: AS " + str(as_number) + " is already registered.", file=sys.stderr)
 
   def show_AS_list(self):
     for c in self.class_list.values():
