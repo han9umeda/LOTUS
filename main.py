@@ -40,8 +40,8 @@ class AS_class:
   def __init__(self, asn, address):
     self.as_number = asn
     self.network_address = address
-    self.routing_table = Routing_table()
-    self.policy = []
+    self.policy = ["LocPrf", "PathLength"]
+    self.routing_table = Routing_table(self.policy)
 
   def show_info(self):
     print(self.as_number)
@@ -53,8 +53,9 @@ class AS_class:
     self.routing_table.update(update_message)
 
 class Routing_table:
-  def __init__(self):
+  def __init__(self, policy):
     self.table = {}
+    self.policy = policy
 
   def update(self, update_message):
     network = update_message["network"]
@@ -69,9 +70,31 @@ class Routing_table:
       locpref = 200
 
     try:
-      self.table[network].append({"path": path, "come_from": come_from, "LocPrf": locpref, "best_path": False})
+      new_route = {"path": path, "come_from": come_from, "LocPrf": locpref, "best_path": False}
+      self.table[network].append(new_route)
+
+      # select best path
+      best = None
+      for r in self.table[network]:
+        if r["best_path"] == True:
+          best = r
+          break
+
+      for p in self.policy:
+        if p == "LocPrf":
+          if new_route["LocPrf"] > best["LocPrf"]: new_route["best_path"] = True; best["best_path"] = False
+          elif new_route["LocPrf"] == best["LocPrf"]: continue
+          elif new_route["LocPrf"] < best["LocPrf"]: break
+        elif p == "PathLength":
+          new_length = len(new_route["path"].split("-"))
+          best_length = len(best["path"].split("-"))
+          if new_length < best_length: new_route["best_path"] = True; best["best_path"] = False
+          elif new_length == best_length: continue
+          elif new_length > best_length: break
+
     except KeyError:
       self.table[network] = [{"path": path, "come_from": come_from, "LocPrf": locpref, "best_path": True}]
+
 
   def get_table(self):
     return self.table
