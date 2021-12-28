@@ -73,16 +73,18 @@ class Interpreter(Cmd):
       self.as_class_list.show_AS_list()
 
   def do_registerMessage(self, line):
-    if line == "":
-      print("Error: Unknown Syntax", file=sys.stderr)
-    else:
+    try:
+      if line == "":
+        raise Exception
       param = line.split()
-      if param[0] == "init" and len(param) == 2:
+      if param[0] == "init" and len(param) == 2:      # ex) registerMessage init 12
         self.message_queue.put({"type":"init", "src": str(param[1])})
-      elif param[0] == "update" and len(param) == 5:
-        self.message_queue.put({"type":"init", "src": str(param[1]), "dst": str(param[2]), "path": str(param[3]), "network": str(param[4])})
+      elif param[0] == "update" and len(param) == 5:  # ex) registerMessage update 12 34 54-12 10.1.1.0/24
+        self.message_queue.put({"type":"update", "src": str(param[1]), "dst": str(param[2]), "path": str(param[3]), "network": str(param[4])})
       else:
-        print("Error: Unknown Syntax", file=sys.stderr)
+        raise Exception
+    except Exception:
+      print("Error: Unknown Syntax", file=sys.stderr)
 
   def do_showMessage(self, line):
     tmp_queue = queue.Queue()
