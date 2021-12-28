@@ -1,21 +1,30 @@
 from cmd import Cmd
 
 class AS_class_list:
-
   def __init__(self):
     self.class_list = {}
+    self.ip_gen = IP_address_generator()
 
   def add_AS(self, as_number):
-    self.class_list[as_number] = AS_class(as_number)
+    self.class_list[as_number] = AS_class(as_number, self.ip_gen.get_unique_address())
 
   def show_AS_list(self):
     for c in self.class_list.values():
       c.show_info()
 
+class IP_address_generator:
+  def __init__(self):
+    self.index = 1 # To generate unique address
+
+  def get_unique_address(self):
+    address = "10." + str(self.index // 256) + "." + str(self.index % 256) + ".0/24"
+    self.index += 1
+    return address
+
 class AS_class:
-  def __init__(self, asn):
+  def __init__(self, asn, address):
     self.as_number = asn
-    self.network_address = "xxxx"
+    self.network_address = address
     self.routing_table = {}
     self.policy = []
 
