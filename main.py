@@ -87,7 +87,8 @@ class Interpreter(Cmd):
       else:
         raise Exception
     except Exception:
-      print("Error: Unknown Syntax", file=sys.stderr)
+      print("Usage: addMessage init [src_asn]", file=sys.stderr)
+      print("       addMessage update [src_asn] [dst_asn] [path] [network]", file=sys.stderr)
 
   def do_showMessage(self, line):
     tmp_queue = queue.Queue()
@@ -110,7 +111,8 @@ class Interpreter(Cmd):
       else:
         raise Exception
     except Exception:
-      print("Error: Unknown Syntax", file=sys.stderr)
+      print("Usage: addConnection peer [src_asn] [dst_asn]", file=sys.stderr)
+      print("       addConnection down [src_asn] [dst_asn]", file=sys.stderr)
 
   def do_showConnection(self, line):
     for c in self.connection_list:
