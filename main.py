@@ -1,4 +1,5 @@
 import sys
+import re
 from cmd import Cmd
 import queue
 
@@ -77,9 +78,10 @@ class Interpreter(Cmd):
       if line == "":
         raise Exception
       param = line.split()
-      if param[0] == "init" and len(param) == 2:      # ex) registerMessage init 12
+      if len(param) == 2 and param[0] == "init" and param[1].isdecimal():      # ex) registerMessage init 12
         self.message_queue.put({"type":"init", "src": str(param[1])})
-      elif param[0] == "update" and len(param) == 5:  # ex) registerMessage update 12 34 54-12 10.1.1.0/24
+      elif len(param) == 5 and param[0] == "update" and param[1].isdecimal() and \  # ex) registerMessage update 12 34 54-12 10.1.1.0/24
+           param[2].isdecimal() and re.fullmatch("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/[0-9][0-9]" , param[4]):
         self.message_queue.put({"type":"update", "src": str(param[1]), "dst": str(param[2]), "path": str(param[3]), "network": str(param[4])})
       else:
         raise Exception
