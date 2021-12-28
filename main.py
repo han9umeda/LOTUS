@@ -15,7 +15,7 @@ class Interpreter(Cmd):
   intro = "=== This is ASPA simulator. ==="
   prompt = "aspa_simulation >> "
 
-  def do_exit(self):
+  def do_exit(self, line):
     return True
 
 try:
@@ -23,5 +23,5 @@ try:
 except KeyboardInterrupt:
   print("\nKeyboard Interrupt (Ctrl+C)")
   pass
-except:
-  pass
+# except:
+#   pass
