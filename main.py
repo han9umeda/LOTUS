@@ -49,12 +49,15 @@ class AS_class:
     print(self.routing_table.get_table())
     print(self.policy)
 
+  def update(self, update_message):
+    self.routing_table.update(update_message)
+
 class Routing_table:
   def __init__(self):
     self.table = {}
 
   def update(self, update_message):
-    table[update_message["network"]] = update_message["path"]
+    self.table[update_message["network"]] = update_message["path"]
 
   def get_table(self):
     return self.table
@@ -136,7 +139,7 @@ class Interpreter(Cmd):
       m = self.message_queue.get()
       if m["type"] == "update":
         as_class = self.as_class_list.get_AS(m["dst"])
-        as_class.show_info()
+        as_class.update(m)
 
 
 ###
