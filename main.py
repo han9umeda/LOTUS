@@ -196,15 +196,16 @@ class Interpreter(Cmd):
       m = self.message_queue.get()
       if m["type"] == "update":
         as_class = self.as_class_list.get_AS(m["dst"])
+
         connection = None
+        connection_with_dst = []
         for c in self.connection_list: # search src-dst connection
           if c["src"] == m["dst"] or c["dst"] == m["dst"]:
-            if c["src"] == m["src"] or c["dst"] == m["src"]:
-              connection = c
-              break
-            else:
-              continue
-            continue
+            connection_with_dst.append(c)
+        for c in connection_with_dst:
+          if c["src"] == m["src"] or c["dst"] == m["src"]:
+            connection = c
+            break
 
         if connection["type"] == "peer":
           m["come_from"] = "peer"
