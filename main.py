@@ -58,6 +58,7 @@ class AS_class:
       return
     else:
       route_diff["path"] = str(self.as_number) + "-" + route_diff["path"]
+      print("DEBUG")
       print(route_diff)
       return route_diff
 
@@ -200,10 +201,10 @@ class Interpreter(Cmd):
         connection = None
         connection_with_dst = []
         for c in self.connection_list: # search src-dst connection
-          if c["src"] == m["dst"] or c["dst"] == m["dst"]:
+          if m["dst"] in [c["src"], c["dst"]]:
             connection_with_dst.append(c)
         for c in connection_with_dst:
-          if c["src"] == m["src"] or c["dst"] == m["src"]:
+          if m["src"] in [c["src"], c["dst"]]:
             connection = c
             break
 
@@ -229,7 +230,7 @@ class Interpreter(Cmd):
             new_update_message["dst"] = tmp[0]
             print("DEBUG")
             print(new_update_message)
-        else:
+        elif route_diff["come_from"] == "peer" or route_diff["come_from"] == "provider":
           for c in connection_with_dst:
             if c["type"] == "down" and c["src"] == m["dst"]:
               new_update_message = {}
