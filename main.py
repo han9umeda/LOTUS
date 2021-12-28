@@ -222,6 +222,7 @@ class Interpreter(Cmd):
         if route_diff["come_from"] == "customer":
           for c in connection_with_dst:
             new_update_message = {}
+            new_update_message["type"] = "update"
             new_update_message["src"] = m["dst"]
             new_update_message["path"] = route_diff["path"]
             new_update_message["network"] = route_diff["network"]
@@ -230,16 +231,26 @@ class Interpreter(Cmd):
             new_update_message["dst"] = tmp[0]
             print("DEBUG")
             print(new_update_message)
+            self.message_queue.put(new_update_message)
         elif route_diff["come_from"] == "peer" or route_diff["come_from"] == "provider":
           for c in connection_with_dst:
             if c["type"] == "down" and c["src"] == m["dst"]:
               new_update_message = {}
+              new_update_message["type"] = "update"
               new_update_message["src"] = m["dst"]
               new_update_message["dst"] = c["dst"]
               new_update_message["path"] = route_diff["path"]
               new_update_message["network"] = route_diff["network"]
               print("DEBUG")
               print(new_update_message)
+              self.message_queue.put(new_update_message)
+        print("DEBUG Queue")
+        tmp_queue = queue.Queue()
+        while not self.message_queue.empty():
+          q = self.message_queue.get()
+          print(q)
+          tmp_queue.put(q)
+        self.message_queue = tmp_queue
 
 
 ###
