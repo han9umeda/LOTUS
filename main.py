@@ -52,7 +52,14 @@ class AS_class:
   def update(self, update_message):
     if self.as_number in update_message["path"].split("-"):
       return
-    self.routing_table.update(update_message)
+
+    update = self.routing_table.update(update_message)
+    if update == None:
+      return
+    print("DEBUG")
+    print(update)
+    update["path"] = str(self.as_number) + "-" + update["path"]
+    print(update)
 
 class Routing_table:
   def __init__(self, policy):
@@ -84,18 +91,29 @@ class Routing_table:
 
       for p in self.policy:
         if p == "LocPrf":
-          if new_route["LocPrf"] > best["LocPrf"]: new_route["best_path"] = True; best["best_path"] = False
-          elif new_route["LocPrf"] == best["LocPrf"]: continue
-          elif new_route["LocPrf"] < best["LocPrf"]: break
+          if new_route["LocPrf"] > best["LocPrf"]:
+            new_route["best_path"] = True
+            best["best_path"] = False
+            return {"path": new_route["path"], "come_from": new_route["come_from"], "network": network}
+          elif new_route["LocPrf"] == best["LocPrf"]:
+            continue
+          elif new_route["LocPrf"] < best["LocPrf"]:
+            return None
         elif p == "PathLength":
           new_length = len(new_route["path"].split("-"))
           best_length = len(best["path"].split("-"))
-          if new_length < best_length: new_route["best_path"] = True; best["best_path"] = False
-          elif new_length == best_length: continue
-          elif new_length > best_length: break
+          if new_length < best_length:
+            new_route["best_path"] = True
+            best["best_path"] = False
+            return {"path": new_route["path"], "come_from": new_route["come_from"], "network": network}
+          elif new_length == best_length:
+            continue
+          elif new_length > best_length:
+            return None
 
     except KeyError:
       self.table[network] = [{"path": path, "come_from": come_from, "LocPrf": locpref, "best_path": True}]
+      return {"path": path, "come_from": come_from, "network": network}
 
 
   def get_table(self):
