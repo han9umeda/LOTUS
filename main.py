@@ -61,8 +61,6 @@ class AS_class:
       return route_diff
 
   def receive_init(self, init_message):
-    print("DEBUG init in AS class")
-    print(self.as_number)
     best_path_list = self.routing_table.get_best_path_list()
     new_update_message_list = []
     update_src = self.as_number
@@ -73,11 +71,13 @@ class AS_class:
           new_update_message_list.append({"src": update_src, "dst": update_dst, "path": update_src, "network": r["network"]})
         else:
           new_update_message_list.append({"src": update_src, "dst": update_dst, "path": update_src + "-" + r["path"], "network": r["network"]})
-      print("all route")
-      print(new_update_message_list)
     else:
-      print("customer route only")
-      print(best_path_list)
+      for r in best_path_list:
+        if r["come_from"] == "customer":
+          if r["path"] == "": # the network is the AS itself
+            new_update_message_list.append({"src": update_src, "dst": update_dst, "path": update_src, "network": r["network"]})
+          else:
+            new_update_message_list.append({"src": update_src, "dst": update_dst, "path": update_src + "-" + r["path"], "network": r["network"]})
     return new_update_message_list
 
 class Routing_table:
