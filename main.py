@@ -65,11 +65,10 @@ class AS_class:
 
   def change_ASPV(self, message):
     if message["switch"] == "on":
-      print("DEBUG ASPV on")
-      print("DEBUG priority")
-      print(message["print"])
+      self.policy = ["LocPrf", "PathLength"]
+      self.policy.insert(int(message["priority"]) - 1, "aspv")
     elif message["switch"] == "off":
-      print("DEBUG ASPV off")
+      self.policy = ["LocPrf", "PathLength"]
 
   def receive_init(self, init_message):
     best_path_list = self.routing_table.get_best_path_list()
