@@ -152,6 +152,10 @@ class Routing_table:
   def get_table(self):
     return self.table
 
+class ASPAInputError(Exception):
+  # Exception class for application-dependent error
+  pass
+
 class Interpreter(Cmd):
   def __init__(self):
     super().__init__()
@@ -192,7 +196,7 @@ class Interpreter(Cmd):
   def do_addMessage(self, line):
     try:
       if line == "":
-        raise Exception
+        raise ASPAInputError
       param = line.split()
       if len(param) == 2 and param[0] == "init" and param[1].isdecimal():          # ex) addMessage init 12
         self.message_queue.put({"type": "init", "src": str(param[1])})
@@ -200,8 +204,8 @@ class Interpreter(Cmd):
            param[2].isdecimal() and re.fullmatch("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/[0-9][0-9]" , param[4]): # ex) addMessage update 12 34 54-12 10.1.1.0/24
         self.message_queue.put({"type": "update", "src": str(param[1]), "dst": str(param[2]), "path": str(param[3]), "network": str(param[4])})
       else:
-        raise Exception
-    except Exception:
+        raise ASPAInputError
+    except ASPAInputError:
       print("Usage: addMessage init [src_asn]", file=sys.stderr)
       print("       addMessage update [src_asn] [dst_asn] [path] [network]", file=sys.stderr)
 
@@ -226,10 +230,10 @@ class Interpreter(Cmd):
         elif param[0] == "down":
           self.connection_list.append({"type": "down", "src": param[1], "dst": param[2]})
         else:
-          raise Exception
+          raise ASPAInputError
       else:
-        raise Exception
-    except Exception:
+        raise ASPAInputError
+    except ASPAInputError:
       print("Usage: addConnection peer [src_asn] [dst_asn]", file=sys.stderr)
       print("       addConnection down [src_asn] [dst_asn]", file=sys.stderr)
 
