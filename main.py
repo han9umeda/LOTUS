@@ -64,12 +64,21 @@ class AS_class:
     print("DEBUG init in AS class")
     print(self.as_number)
     best_path_list = self.routing_table.get_best_path_list()
+    new_update_message_list = []
+    update_src = self.as_number
+    update_dst = init_message["src"]
     if init_message["come_from"] == "customer":
+      for r in best_path_list:
+        if r["path"] == "": # the network is the AS itself
+          new_update_message_list.append({"src": update_src, "dst": update_dst, "path": update_src, "network": r["network"]})
+        else:
+          new_update_message_list.append({"src": update_src, "dst": update_dst, "path": update_src + "-" + r["path"], "network": r["network"]})
       print("all route")
-      print(best_path_list)
+      print(new_update_message_list)
     else:
       print("customer route only")
       print(best_path_list)
+    return new_update_message_list
 
 class Routing_table:
   def __init__(self, policy):
@@ -129,10 +138,10 @@ class Routing_table:
 
     best_path_list = []
 
-    for address in self.table.keys():
-      for route in self.table[address]:
+    for network in self.table.keys():
+      for route in self.table[network]:
         if route["best_path"] == True:
-          best_path_list.append(dict({"address": address}, **route))
+          best_path_list.append(dict({"network": network}, **route))
 
     return best_path_list
 
@@ -281,7 +290,16 @@ class Interpreter(Cmd):
           m["come_from"] = self.as_a_is_what_on_c(m["src"], c)
           tmp = [c["src"], c["dst"]]
           tmp.remove(m["src"])
-          self.as_class_list.get_AS(tmp[0]).receive_init(m)
+          new_update_message_list = self.as_class_list.get_AS(tmp[0]).receive_init(m)
+          for m in new_update_message_list:
+            self.message_queue.put(dict({"type": "update"}, **m))
+        print("DEBUG Queue")
+        tmp_queue = queue.Queue()
+        while not self.message_queue.empty():
+          q = self.message_queue.get()
+          print(q)
+          tmp_queue.put(q)
+        self.message_queue = tmp_queue
 
 
 ###
