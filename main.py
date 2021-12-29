@@ -169,7 +169,16 @@ class Interpreter(Cmd):
     if line.isdecimal():
       self.as_class_list.add_AS(line)
     else:
-      print("Error: Unknown Syntax", file=sys.stderr)
+      print("Usage: addAS [asn]", file=sys.stderr)
+
+  def do_showAS(self, line):
+    if line.isdecimal():
+      try:
+        self.as_class_list.get_AS(line).show_info()
+      except KeyError:
+        print("Error: AS " + str(line) + " is NOT registered.", file=sys.stderr)
+    else:
+      print("Usage: addAS [asn]", file=sys.stderr)
 
   def do_showASList(self, line):
     if line:
@@ -285,13 +294,6 @@ class Interpreter(Cmd):
               new_update_message["path"] = route_diff["path"]
               new_update_message["network"] = route_diff["network"]
               self.message_queue.put(new_update_message)
-        # print("DEBUG Queue")
-        # tmp_queue = queue.Queue()
-        # while not self.message_queue.empty():
-        #   q = self.message_queue.get()
-        #   print(q)
-        #   tmp_queue.put(q)
-        # self.message_queue = tmp_queue
 
       elif m["type"] == "init":
         for c in self.get_connection_with(m["src"]):
@@ -301,13 +303,6 @@ class Interpreter(Cmd):
           new_update_message_list = self.as_class_list.get_AS(tmp[0]).receive_init(m)
           for new_m in new_update_message_list:
             self.message_queue.put(dict({"type": "update"}, **new_m))
-        # print("DEBUG Queue")
-        # tmp_queue = queue.Queue()
-        # while not self.message_queue.empty():
-        #   q = self.message_queue.get()
-        #   print(q)
-        #   tmp_queue.put(q)
-        # self.message_queue = tmp_queue
 
 
 ###
