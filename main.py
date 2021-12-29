@@ -63,6 +63,14 @@ class AS_class:
       route_diff["path"] = str(self.as_number) + "-" + route_diff["path"]
       return route_diff
 
+  def change_ASPV(self, message):
+    if message["switch"] == "on":
+      print("DEBUG ASPV on")
+      print("DEBUG priority")
+      print(message["print"])
+    elif message["switch"] == "off":
+      print("DEBUG ASPV off")
+
   def receive_init(self, init_message):
     best_path_list = self.routing_table.get_best_path_list()
     new_update_message_list = []
@@ -263,6 +271,30 @@ class Interpreter(Cmd):
         print(self.public_aspa_list[line])
       except KeyError:
         print("Error: Unknown Syntax", file=sys.stderr)
+
+  def do_setASPV(self, line):
+    param = line.split()
+    try:
+      if len(param) < 2:
+        raise ASPAInputError
+      if not param[0].isdecimal():
+        raise ASPAInputError
+      as_class = self.as_class_list.get_AS(param[0])
+      if param[1] == "on":
+        if re.fullmatch("1|2|3", param[2]):
+          as_class.change_ASPV({"switch": "on", "priority": param[2]})
+        else:
+          raise ASPAInputError
+      elif param[1] == "off":
+        as_class.change_ASPV({"switch": "off"})
+      else:
+        raise ASPAInputError
+
+    except ASPAInputError:
+      print("Usage: setASPV [asn] on [1/2/3]", file=sys.stderr)
+      print("       setASPV [asn] off", file=sys.stderr)
+    except KeyError:
+      print("Error: AS " + str(param[0]) + " is NOT registered.", file=sys.stderr)
 
   def get_connection_with(self, as_number):
     c_list = []
