@@ -199,6 +199,15 @@ class Interpreter(Cmd):
         c_list.append(c)
     return c_list
 
+  def as_a_is_what_on_c(self, as_a, connection_c):
+    if connection_c["type"] == "peer":
+      return "peer"
+    elif connection_c["type"] == "down":
+      if as_a == connection_c["src"]:
+        return "provider"
+      elif as_a == connection_c["dst"]:
+        return "customer"
+
   def do_run(self, line):
     while not self.message_queue.empty():
       m = self.message_queue.get()
@@ -213,13 +222,8 @@ class Interpreter(Cmd):
             connection = c
             break
 
-        if connection["type"] == "peer":
-          m["come_from"] = "peer"
-        elif connection["type"] == "down":
-          if m["src"] == connection["src"]:
-            m["come_from"] = "provider"
-          elif m["src"] == connection["dst"]:
-            m["come_from"] = "customer"
+        # peer, customer or provider
+        m["come_from"] = self.as_a_is_what_on_c(m["src"], connection)
 
         route_diff = as_class.update(m)
         if route_diff == None:
