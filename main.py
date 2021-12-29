@@ -27,6 +27,9 @@ class AS_class_list:
   def get_AS(self, as_number):
     return self.class_list[as_number]
 
+  def get_AS_list(self):
+    return self.class_list
+
 class IP_address_generator:
   def __init__(self):
     self.index = 1 # To generate unique address
@@ -41,7 +44,7 @@ class AS_class:
     self.as_number = asn
     self.network_address = address
     self.policy = ["LocPrf", "PathLength"]
-    self.routing_table = Routing_table(self.policy)
+    self.routing_table = Routing_table(self.network_address, self.policy)
 
   def show_info(self):
     print(self.as_number)
@@ -58,13 +61,32 @@ class AS_class:
       return
     else:
       route_diff["path"] = str(self.as_number) + "-" + route_diff["path"]
-      print("DEBUG")
-      print(route_diff)
       return route_diff
 
+  def receive_init(self, init_message):
+    best_path_list = self.routing_table.get_best_path_list()
+    new_update_message_list = []
+    update_src = self.as_number
+    update_dst = init_message["src"]
+    if init_message["come_from"] == "customer":
+      for r in best_path_list:
+        if r["path"] == "i": # the network is the AS itself
+          new_update_message_list.append({"src": update_src, "dst": update_dst, "path": update_src, "network": r["network"]})
+        else:
+          new_update_message_list.append({"src": update_src, "dst": update_dst, "path": update_src + "-" + r["path"], "network": r["network"]})
+    else:
+      for r in best_path_list:
+        if r["come_from"] == "customer":
+          if r["path"] == "i": # the network is the AS itself
+            new_update_message_list.append({"src": update_src, "dst": update_dst, "path": update_src, "network": r["network"]})
+          else:
+            new_update_message_list.append({"src": update_src, "dst": update_dst, "path": update_src + "-" + r["path"], "network": r["network"]})
+    return new_update_message_list
+
 class Routing_table:
-  def __init__(self, policy):
+  def __init__(self, network, policy):
     self.table = {}
+    self.table[network] = [{"path": "i", "come_from": "customer", "LocPrf": 1000, "best_path": True}]
     self.policy = policy
 
   def update(self, update_message):
@@ -116,6 +138,16 @@ class Routing_table:
       self.table[network] = [{"path": path, "come_from": come_from, "LocPrf": locpref, "best_path": True}]
       return {"path": path, "come_from": come_from, "network": network}
 
+  def get_best_path_list(self):
+
+    best_path_list = []
+
+    for network in self.table.keys():
+      for route in self.table[network]:
+        if route["best_path"] == True:
+          best_path_list.append(dict({"network": network}, **route))
+
+    return best_path_list
 
   def get_table(self):
     return self.table
@@ -154,15 +186,19 @@ class Interpreter(Cmd):
         raise Exception
       param = line.split()
       if len(param) == 2 and param[0] == "init" and param[1].isdecimal():          # ex) addMessage init 12
-        self.message_queue.put({"type":"init", "src": str(param[1])})
+        self.message_queue.put({"type": "init", "src": str(param[1])})
       elif len(param) == 5 and param[0] == "update" and param[1].isdecimal() and \
            param[2].isdecimal() and re.fullmatch("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/[0-9][0-9]" , param[4]): # ex) addMessage update 12 34 54-12 10.1.1.0/24
-        self.message_queue.put({"type":"update", "src": str(param[1]), "dst": str(param[2]), "path": str(param[3]), "network": str(param[4])})
+        self.message_queue.put({"type": "update", "src": str(param[1]), "dst": str(param[2]), "path": str(param[3]), "network": str(param[4])})
       else:
         raise Exception
     except Exception:
       print("Usage: addMessage init [src_asn]", file=sys.stderr)
       print("       addMessage update [src_asn] [dst_asn] [path] [network]", file=sys.stderr)
+
+  def do_addAllASInit(self, line):
+    for as_number in self.as_class_list.get_AS_list().keys():
+      self.message_queue.put({"type": "init", "src": as_number})
 
   def do_showMessage(self, line):
     tmp_queue = queue.Queue()
@@ -192,29 +228,38 @@ class Interpreter(Cmd):
     for c in self.connection_list:
       print(c)
 
+  def get_connection_with(self, as_number):
+    c_list = []
+    for c in self.connection_list:
+      if as_number in [c["src"], c["dst"]]:
+        c_list.append(c)
+    return c_list
+
+  def as_a_is_what_on_c(self, as_a, connection_c):
+    if connection_c["type"] == "peer":
+      return "peer"
+    elif connection_c["type"] == "down":
+      if as_a == connection_c["src"]:
+        return "provider"
+      elif as_a == connection_c["dst"]:
+        return "customer"
+
   def do_run(self, line):
     while not self.message_queue.empty():
       m = self.message_queue.get()
       if m["type"] == "update":
         as_class = self.as_class_list.get_AS(m["dst"])
 
+        # search src-dst connection
+        connection_with_dst = self.get_connection_with(m["dst"])
         connection = None
-        connection_with_dst = []
-        for c in self.connection_list: # search src-dst connection
-          if m["dst"] in [c["src"], c["dst"]]:
-            connection_with_dst.append(c)
         for c in connection_with_dst:
           if m["src"] in [c["src"], c["dst"]]:
             connection = c
             break
 
-        if connection["type"] == "peer":
-          m["come_from"] = "peer"
-        elif connection["type"] == "down":
-          if m["src"] == connection["src"]:
-            m["come_from"] = "provider"
-          elif m["src"] == connection["dst"]:
-            m["come_from"] = "customer"
+        # peer, customer or provider
+        m["come_from"] = self.as_a_is_what_on_c(m["src"], connection)
 
         route_diff = as_class.update(m)
         if route_diff == None:
@@ -229,8 +274,6 @@ class Interpreter(Cmd):
             tmp = [c["src"], c["dst"]]
             tmp.remove(m["dst"])
             new_update_message["dst"] = tmp[0]
-            print("DEBUG")
-            print(new_update_message)
             self.message_queue.put(new_update_message)
         elif route_diff["come_from"] == "peer" or route_diff["come_from"] == "provider":
           for c in connection_with_dst:
@@ -241,16 +284,30 @@ class Interpreter(Cmd):
               new_update_message["dst"] = c["dst"]
               new_update_message["path"] = route_diff["path"]
               new_update_message["network"] = route_diff["network"]
-              print("DEBUG")
-              print(new_update_message)
               self.message_queue.put(new_update_message)
-        print("DEBUG Queue")
-        tmp_queue = queue.Queue()
-        while not self.message_queue.empty():
-          q = self.message_queue.get()
-          print(q)
-          tmp_queue.put(q)
-        self.message_queue = tmp_queue
+        # print("DEBUG Queue")
+        # tmp_queue = queue.Queue()
+        # while not self.message_queue.empty():
+        #   q = self.message_queue.get()
+        #   print(q)
+        #   tmp_queue.put(q)
+        # self.message_queue = tmp_queue
+
+      elif m["type"] == "init":
+        for c in self.get_connection_with(m["src"]):
+          m["come_from"] = self.as_a_is_what_on_c(m["src"], c)
+          tmp = [c["src"], c["dst"]]
+          tmp.remove(m["src"])
+          new_update_message_list = self.as_class_list.get_AS(tmp[0]).receive_init(m)
+          for new_m in new_update_message_list:
+            self.message_queue.put(dict({"type": "update"}, **new_m))
+        # print("DEBUG Queue")
+        # tmp_queue = queue.Queue()
+        # while not self.message_queue.empty():
+        #   q = self.message_queue.get()
+        #   print(q)
+        #   tmp_queue.put(q)
+        # self.message_queue = tmp_queue
 
 
 ###
