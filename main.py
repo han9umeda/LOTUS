@@ -63,10 +63,13 @@ class AS_class:
   def receive_init(self, init_message):
     print("DEBUG init in AS class")
     print(self.as_number)
+    best_path_list = self.routing_table.get_best_path_list()
     if init_message["come_from"] == "customer":
       print("all route")
+      print(best_path_list)
     else:
       print("customer route only")
+      print(best_path_list)
 
 class Routing_table:
   def __init__(self, policy):
@@ -122,6 +125,16 @@ class Routing_table:
       self.table[network] = [{"path": path, "come_from": come_from, "LocPrf": locpref, "best_path": True}]
       return {"path": path, "come_from": come_from, "network": network}
 
+  def get_best_path_list(self):
+
+    best_path_list = []
+
+    for address in self.table.keys():
+      for route in self.table[address]:
+        if route["best_path"] == True:
+          best_path_list.append(dict({"address": address}, **route))
+
+    return best_path_list
 
   def get_table(self):
     return self.table
