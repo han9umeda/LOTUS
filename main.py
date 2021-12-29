@@ -58,9 +58,15 @@ class AS_class:
       return
     else:
       route_diff["path"] = str(self.as_number) + "-" + route_diff["path"]
-      print("DEBUG")
-      print(route_diff)
       return route_diff
+
+  def receive_init(self, init_message):
+    print("DEBUG init in AS class")
+    print(self.as_number)
+    if init_message["come_from"] == "customer":
+      print("all route")
+    else:
+      print("customer route only")
 
 class Routing_table:
   def __init__(self, policy):
@@ -256,6 +262,13 @@ class Interpreter(Cmd):
           print(q)
           tmp_queue.put(q)
         self.message_queue = tmp_queue
+
+      elif m["type"] == "init":
+        for c in self.get_connection_with(m["src"]):
+          m["come_from"] = self.as_a_is_what_on_c(m["src"], c)
+          tmp = [c["src"], c["dst"]]
+          tmp.remove(m["src"])
+          self.as_class_list.get_AS(tmp[0]).receive_init(m)
 
 
 ###
