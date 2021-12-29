@@ -41,7 +41,7 @@ class AS_class:
     self.as_number = asn
     self.network_address = address
     self.policy = ["LocPrf", "PathLength"]
-    self.routing_table = Routing_table(self.policy)
+    self.routing_table = Routing_table(self.network_address, self.policy)
 
   def show_info(self):
     print(self.as_number)
@@ -67,22 +67,23 @@ class AS_class:
     update_dst = init_message["src"]
     if init_message["come_from"] == "customer":
       for r in best_path_list:
-        if r["path"] == "": # the network is the AS itself
+        if r["path"] == "i": # the network is the AS itself
           new_update_message_list.append({"src": update_src, "dst": update_dst, "path": update_src, "network": r["network"]})
         else:
           new_update_message_list.append({"src": update_src, "dst": update_dst, "path": update_src + "-" + r["path"], "network": r["network"]})
     else:
       for r in best_path_list:
         if r["come_from"] == "customer":
-          if r["path"] == "": # the network is the AS itself
+          if r["path"] == "i": # the network is the AS itself
             new_update_message_list.append({"src": update_src, "dst": update_dst, "path": update_src, "network": r["network"]})
           else:
             new_update_message_list.append({"src": update_src, "dst": update_dst, "path": update_src + "-" + r["path"], "network": r["network"]})
     return new_update_message_list
 
 class Routing_table:
-  def __init__(self, policy):
+  def __init__(self, network, policy):
     self.table = {}
+    self.table[network] = [{"path": "i", "come_from": "customer", "LocPrf": 1000, "best_path": True}]
     self.policy = policy
 
   def update(self, update_message):
@@ -291,8 +292,8 @@ class Interpreter(Cmd):
           tmp = [c["src"], c["dst"]]
           tmp.remove(m["src"])
           new_update_message_list = self.as_class_list.get_AS(tmp[0]).receive_init(m)
-          for m in new_update_message_list:
-            self.message_queue.put(dict({"type": "update"}, **m))
+          for new_m in new_update_message_list:
+            self.message_queue.put(dict({"type": "update"}, **new_m))
         print("DEBUG Queue")
         tmp_queue = queue.Queue()
         while not self.message_queue.empty():
