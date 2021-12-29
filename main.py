@@ -162,6 +162,7 @@ class Interpreter(Cmd):
     self.as_class_list = AS_class_list()
     self.message_queue = queue.Queue()
     self.connection_list = []
+    self.public_aspa_list = {}
 
   intro = "=== This is ASPA simulator. ==="
   prompt = "aspa_simulation >> "
@@ -240,6 +241,28 @@ class Interpreter(Cmd):
   def do_showConnection(self, line):
     for c in self.connection_list:
       print(c)
+
+  def do_addASPA(self, line):
+    param = line.split()
+    try:
+      if len(param) < 2:
+        raise ASPAInputError
+      else:
+        for p in param:
+          if not p.isdecimal():
+            raise ASPAInputError
+      self.public_aspa_list[param[0]] = param[1:]
+    except ASPAInputError:
+      print("Usage: addASPA [customer_asn] [provider_asns...]")
+
+  def do_showASPA(self, line):
+    if line == "":
+      print(self.public_aspa_list)
+    else:
+      try:
+        print(self.public_aspa_list[line])
+      except KeyError:
+        print("Error: Unknown Syntax", file=sys.stderr)
 
   def get_connection_with(self, as_number):
     c_list = []
