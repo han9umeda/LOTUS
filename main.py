@@ -69,6 +69,7 @@ class AS_class:
       self.policy.insert(int(message["priority"]) - 1, "aspv")
     elif message["switch"] == "off":
       self.policy = ["LocPrf", "PathLength"]
+    self.routing_table.change_policy(self.policy)
 
   def receive_init(self, init_message):
     best_path_list = self.routing_table.get_best_path_list()
@@ -96,6 +97,9 @@ class Routing_table:
     self.table[network] = [{"path": "i", "come_from": "customer", "LocPrf": 1000, "best_path": True}]
     self.policy = policy
 
+  def change_policy(self, policy):
+    self.policy = policy
+
   def update(self, update_message):
     network = update_message["network"]
     path = update_message["path"]
@@ -107,6 +111,9 @@ class Routing_table:
       locpref = 50
     elif come_from == "customer":
       locpref = 200
+
+    if "aspv" in self.policy:
+      pass
 
     try:
       new_route = {"path": path, "come_from": come_from, "LocPrf": locpref, "best_path": False}
