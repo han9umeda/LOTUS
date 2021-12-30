@@ -115,8 +115,10 @@ class Routing_table:
     if "aspv" in self.policy:
       pass
 
+    new_route = {"path": path, "come_from": come_from, "LocPrf": locpref}
+
     try:
-      new_route = {"path": path, "come_from": come_from, "LocPrf": locpref, "best_path": False}
+      new_route["best_path"] = False
       self.table[network].append(new_route)
 
       # select best path
@@ -149,7 +151,8 @@ class Routing_table:
             return None
 
     except KeyError:
-      self.table[network] = [{"path": path, "come_from": come_from, "LocPrf": locpref, "best_path": True}]
+      new_route["best_path"] = True
+      self.table[network] = [new_route]
       return {"path": path, "come_from": come_from, "network": network}
 
   def get_best_path_list(self):
