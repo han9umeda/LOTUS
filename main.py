@@ -119,6 +119,12 @@ class Routing_table:
       return "Invalid"
 
   def aspv(self, route, neighbor_as):
+
+    ###
+    ### Referencing Internet-Draft draft-ietf-sidrops-aspa-verification-08
+    ### https://www.ietf.org/archive/id/draft-ietf-sidrops-aspa-verification-08.txt
+    ###
+
     p = route["path"]
     path_list = p.split("-")
 
@@ -143,10 +149,35 @@ class Routing_table:
       return semi_state
 
     elif route["come_from"] == "provider":
-      print("DEBUG in aspv upstream")
+
       if path_list[0] != neighbor_as:
         return "Invalid"
-      return "DEBUG: provider"
+
+      try:
+        index = -1
+        semi_state = "Valid"
+        upflow_fragment = True
+        while True:
+          if upflow_fragment == True:
+            pair_check = self.verify_pair(path_list[index], path_list[index - 1])
+            if pair_check == "Invalid":
+              upflow_fragment = False
+            elif pair_check == "Unknown":
+              semi_state = "Unknown"
+            index -= 1
+          elif upflow_fragment == False:
+            # I-D version: It is thought to be wrong.
+            # pair_check = self.verify_pair(path_list[index - 1], path_list[index])
+            pair_check = self.verify_pair(path_list[index], path_list[index + 1])
+            if pair_check == "Invalid":
+              return "Invalid"
+            elif pair_check == "Unknown":
+              semi_state = "Unknown"
+            index -= 1
+      except IndexError:  # the end of checking
+        pass
+
+      return semi_state
 
   def update(self, update_message):
     network = update_message["network"]
