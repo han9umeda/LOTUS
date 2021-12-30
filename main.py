@@ -52,6 +52,9 @@ class AS_class:
     print(self.routing_table.get_table())
     print(self.policy)
 
+  def set_public_aspa(self, public_aspa_list):
+    self.routing_table.set_public_aspa(public_aspa_list)
+
   def update(self, update_message):
     if self.as_number in update_message["path"].split("-"):
       return
@@ -96,9 +99,20 @@ class Routing_table:
     self.table = {}
     self.table[network] = [{"path": "i", "come_from": "customer", "LocPrf": 1000, "best_path": True}]
     self.policy = policy
+    self.public_aspa_list = {}
 
   def change_policy(self, policy):
     self.policy = policy
+
+  def set_public_aspa(self, public_aspa_list):
+    self.public_aspa_list = public_aspa_list
+
+  def aspv(self, route):
+    if route["come_from"] == "customer":
+      print("DEBUG in aspv")
+      return route
+    else:
+      return route
 
   def update(self, update_message):
     network = update_message["network"]
@@ -112,10 +126,10 @@ class Routing_table:
     elif come_from == "customer":
       locpref = 200
 
-    if "aspv" in self.policy:
-      pass
-
     new_route = {"path": path, "come_from": come_from, "LocPrf": locpref}
+
+    if "aspv" in self.policy:
+      new_route = self.aspv(new_route)
 
     try:
       new_route["best_path"] = False
@@ -322,6 +336,10 @@ class Interpreter(Cmd):
         return "customer"
 
   def do_run(self, line):
+
+    for as_class in self.as_class_list.get_AS_list().values(): # To reference public_aspa_list when ASPV
+      as_class.set_public_aspa(self.public_aspa_list)
+
     while not self.message_queue.empty():
       m = self.message_queue.get()
       if m["type"] == "update":
