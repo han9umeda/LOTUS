@@ -107,12 +107,19 @@ class Routing_table:
   def set_public_aspa(self, public_aspa_list):
     self.public_aspa_list = public_aspa_list
 
-  def aspv(self, route):
-    if route["come_from"] == "customer":
-      print("DEBUG in aspv")
-      return route
+  def aspv(self, route, neighbor_as):
+    p = route["path"]
+    path_list = p.split("-")
+    if re.fullmatch("customer|peer", route["come_from"]):
+      print("DEBUG in aspv downsteram")
+      if path_list[0] != neighbor_as:
+        return "Invalid"
+      return "Valid"
     else:
-      return route
+      print("DEBUG in aspv upstream")
+      if path_list[0] != neighbor_as:
+        return "Invalid"
+      return "Valid"
 
   def update(self, update_message):
     network = update_message["network"]
@@ -129,7 +136,9 @@ class Routing_table:
     new_route = {"path": path, "come_from": come_from, "LocPrf": locpref}
 
     if "aspv" in self.policy:
-      new_route = self.aspv(new_route)
+      new_route["aspv"] = self.aspv(new_route, update_message["src"])
+    print("DEBUG new_route")
+    print(new_route)
 
     try:
       new_route["best_path"] = False
