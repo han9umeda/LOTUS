@@ -99,27 +99,54 @@ class Routing_table:
     self.table = {}
     self.table[network] = [{"path": "i", "come_from": "customer", "LocPrf": 1000, "best_path": True}]
     self.policy = policy
-    self.public_aspa_list = {}
+    self.aspa_list = {}
 
   def change_policy(self, policy):
     self.policy = policy
 
   def set_public_aspa(self, public_aspa_list):
-    self.public_aspa_list = public_aspa_list
+    self.aspa_list = public_aspa_list
+
+  def verify_pair(self, customer_as, provider_as):
+    try:
+      candidate_provider_list = self.aspa_list[customer_as]
+    except KeyError:
+      return "Unknown"
+
+    if provider_as in candidate_provider_list:
+      return "Valid"
+    else:
+      return "Invalid"
 
   def aspv(self, route, neighbor_as):
     p = route["path"]
     path_list = p.split("-")
+
     if re.fullmatch("customer|peer", route["come_from"]):
-      print("DEBUG in aspv downsteram")
+
       if path_list[0] != neighbor_as:
         return "Invalid"
-      return "Valid"
-    else:
+
+      try:
+        index = -1
+        semi_state = "Valid"
+        while True:
+          pair_check = self.verify_pair(path_list[index], path_list[index - 1])
+          if pair_check == "Invalid":
+            return "Invalid"
+          elif pair_check == "Unknown":
+            semi_state = "Unknown"
+          index -= 1
+      except IndexError:  # the end of checking
+        pass
+
+      return semi_state
+
+    elif route["come_from"] == "provider":
       print("DEBUG in aspv upstream")
       if path_list[0] != neighbor_as:
         return "Invalid"
-      return "Valid"
+      return "DEBUG: provider"
 
   def update(self, update_message):
     network = update_message["network"]
@@ -137,8 +164,6 @@ class Routing_table:
 
     if "aspv" in self.policy:
       new_route["aspv"] = self.aspv(new_route, update_message["src"])
-    print("DEBUG new_route")
-    print(new_route)
 
     try:
       new_route["best_path"] = False
