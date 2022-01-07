@@ -235,7 +235,7 @@ class Routing_table:
             return None
 
     except KeyError:
-      if "aspv" in self.policy:
+      if self.policy[0] == "aspv":
         if new_route["aspv"] == "Invalid":
           new_route["best_path"] = False
           self.table[network] = [new_route]
@@ -250,7 +250,7 @@ class Routing_table:
         return {"path": path, "come_from": come_from, "network": network}
 
     except BestPathNotExist:
-      if "aspv" in self.policy:
+      if self.policy[0] == "aspv":
         if new_route["aspv"] == "Invalid":
           return None
         else:
