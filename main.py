@@ -52,6 +52,9 @@ class AS_class:
     print(self.routing_table.get_table())
     print(self.policy)
 
+  def set_public_aspa(self, public_aspa_list):
+    self.routing_table.set_public_aspa(public_aspa_list)
+
   def update(self, update_message):
     if self.as_number in update_message["path"].split("-"):
       return
@@ -62,6 +65,14 @@ class AS_class:
     else:
       route_diff["path"] = str(self.as_number) + "-" + route_diff["path"]
       return route_diff
+
+  def change_ASPV(self, message):
+    if message["switch"] == "on":
+      self.policy = ["LocPrf", "PathLength"]
+      self.policy.insert(int(message["priority"]) - 1, "aspv")
+    elif message["switch"] == "off":
+      self.policy = ["LocPrf", "PathLength"]
+    self.routing_table.change_policy(self.policy)
 
   def receive_init(self, init_message):
     best_path_list = self.routing_table.get_best_path_list()
@@ -88,6 +99,85 @@ class Routing_table:
     self.table = {}
     self.table[network] = [{"path": "i", "come_from": "customer", "LocPrf": 1000, "best_path": True}]
     self.policy = policy
+    self.aspa_list = {}
+
+  def change_policy(self, policy):
+    self.policy = policy
+
+  def set_public_aspa(self, public_aspa_list):
+    self.aspa_list = public_aspa_list
+
+  def verify_pair(self, customer_as, provider_as):
+    try:
+      candidate_provider_list = self.aspa_list[customer_as]
+    except KeyError:
+      return "Unknown"
+
+    if provider_as in candidate_provider_list:
+      return "Valid"
+    else:
+      return "Invalid"
+
+  def aspv(self, route, neighbor_as):
+
+    ###
+    ### Referencing Internet-Draft draft-ietf-sidrops-aspa-verification-08
+    ### https://www.ietf.org/archive/id/draft-ietf-sidrops-aspa-verification-08.txt
+    ###
+
+    p = route["path"]
+    path_list = p.split("-")
+
+    if re.fullmatch("customer|peer", route["come_from"]):
+
+      if path_list[0] != neighbor_as:
+        return "Invalid"
+
+      try:
+        index = -1
+        semi_state = "Valid"
+        while True:
+          pair_check = self.verify_pair(path_list[index], path_list[index - 1])
+          if pair_check == "Invalid":
+            return "Invalid"
+          elif pair_check == "Unknown":
+            semi_state = "Unknown"
+          index -= 1
+      except IndexError:  # the end of checking
+        pass
+
+      return semi_state
+
+    elif route["come_from"] == "provider":
+
+      if path_list[0] != neighbor_as:
+        return "Invalid"
+
+      try:
+        index = -1
+        semi_state = "Valid"
+        upflow_fragment = True
+        while True:
+          if upflow_fragment == True:
+            pair_check = self.verify_pair(path_list[index], path_list[index - 1])
+            if pair_check == "Invalid":
+              upflow_fragment = False
+            elif pair_check == "Unknown":
+              semi_state = "Unknown"
+            index -= 1
+          elif upflow_fragment == False:
+            # I-D version: It is thought to be wrong.
+            # pair_check = self.verify_pair(path_list[index - 1], path_list[index])
+            pair_check = self.verify_pair(path_list[index], path_list[index + 1])
+            if pair_check == "Invalid":
+              return "Invalid"
+            elif pair_check == "Unknown":
+              semi_state = "Unknown"
+            index -= 1
+      except IndexError:  # the end of checking
+        pass
+
+      return semi_state
 
   def update(self, update_message):
     network = update_message["network"]
@@ -101,8 +191,13 @@ class Routing_table:
     elif come_from == "customer":
       locpref = 200
 
+    new_route = {"path": path, "come_from": come_from, "LocPrf": locpref}
+
+    if "aspv" in self.policy:
+      new_route["aspv"] = self.aspv(new_route, update_message["src"])
+
     try:
-      new_route = {"path": path, "come_from": come_from, "LocPrf": locpref, "best_path": False}
+      new_route["best_path"] = False
       self.table[network].append(new_route)
 
       # select best path
@@ -111,6 +206,8 @@ class Routing_table:
         if r["best_path"] == True:
           best = r
           break
+      if best == None:
+        raise BestPathNotExist
 
       for p in self.policy:
         if p == "LocPrf":
@@ -133,10 +230,35 @@ class Routing_table:
             continue
           elif new_length > best_length:
             return None
+        elif p == "aspv":
+          if new_route["aspv"] == "Invalid":
+            return None
 
     except KeyError:
-      self.table[network] = [{"path": path, "come_from": come_from, "LocPrf": locpref, "best_path": True}]
-      return {"path": path, "come_from": come_from, "network": network}
+      if self.policy[0] == "aspv":
+        if new_route["aspv"] == "Invalid":
+          new_route["best_path"] = False
+          self.table[network] = [new_route]
+          return None
+        else:
+          new_route["best_path"] = True
+          self.table[network] = [new_route]
+          return {"path": path, "come_from": come_from, "network": network}
+      else:
+        new_route["best_path"] = True
+        self.table[network] = [new_route]
+        return {"path": path, "come_from": come_from, "network": network}
+
+    except BestPathNotExist:
+      if self.policy[0] == "aspv":
+        if new_route["aspv"] == "Invalid":
+          return None
+        else:
+          new_route["best_path"] = True
+          return {"path": path, "come_from": come_from, "network": network}
+      else:
+        new_route["best_path"] = True
+        return {"path": path, "come_from": come_from, "network": network}
 
   def get_best_path_list(self):
 
@@ -152,12 +274,20 @@ class Routing_table:
   def get_table(self):
     return self.table
 
+class ASPAInputError(Exception):
+  # Exception class for application-dependent error
+  pass
+
+class BestPathNotExist(Exception):
+  pass
+
 class Interpreter(Cmd):
   def __init__(self):
     super().__init__()
     self.as_class_list = AS_class_list()
     self.message_queue = queue.Queue()
     self.connection_list = []
+    self.public_aspa_list = {}
 
   intro = "=== This is ASPA simulator. ==="
   prompt = "aspa_simulation >> "
@@ -192,7 +322,7 @@ class Interpreter(Cmd):
   def do_addMessage(self, line):
     try:
       if line == "":
-        raise Exception
+        raise ASPAInputError
       param = line.split()
       if len(param) == 2 and param[0] == "init" and param[1].isdecimal():          # ex) addMessage init 12
         self.message_queue.put({"type": "init", "src": str(param[1])})
@@ -200,8 +330,8 @@ class Interpreter(Cmd):
            param[2].isdecimal() and re.fullmatch("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/[0-9][0-9]" , param[4]): # ex) addMessage update 12 34 54-12 10.1.1.0/24
         self.message_queue.put({"type": "update", "src": str(param[1]), "dst": str(param[2]), "path": str(param[3]), "network": str(param[4])})
       else:
-        raise Exception
-    except Exception:
+        raise ASPAInputError
+    except ASPAInputError:
       print("Usage: addMessage init [src_asn]", file=sys.stderr)
       print("       addMessage update [src_asn] [dst_asn] [path] [network]", file=sys.stderr)
 
@@ -226,16 +356,62 @@ class Interpreter(Cmd):
         elif param[0] == "down":
           self.connection_list.append({"type": "down", "src": param[1], "dst": param[2]})
         else:
-          raise Exception
+          raise ASPAInputError
       else:
-        raise Exception
-    except Exception:
+        raise ASPAInputError
+    except ASPAInputError:
       print("Usage: addConnection peer [src_asn] [dst_asn]", file=sys.stderr)
       print("       addConnection down [src_asn] [dst_asn]", file=sys.stderr)
 
   def do_showConnection(self, line):
     for c in self.connection_list:
       print(c)
+
+  def do_addASPA(self, line):
+    param = line.split()
+    try:
+      if len(param) < 2:
+        raise ASPAInputError
+      else:
+        for p in param:
+          if not p.isdecimal():
+            raise ASPAInputError
+      self.public_aspa_list[param[0]] = param[1:]
+    except ASPAInputError:
+      print("Usage: addASPA [customer_asn] [provider_asns...]")
+
+  def do_showASPA(self, line):
+    if line == "":
+      print(self.public_aspa_list)
+    else:
+      try:
+        print(self.public_aspa_list[line])
+      except KeyError:
+        print("Error: Unknown Syntax", file=sys.stderr)
+
+  def do_setASPV(self, line):
+    param = line.split()
+    try:
+      if len(param) < 2:
+        raise ASPAInputError
+      if not param[0].isdecimal():
+        raise ASPAInputError
+      as_class = self.as_class_list.get_AS(param[0])
+      if param[1] == "on":
+        if re.fullmatch("1|2|3", param[2]):
+          as_class.change_ASPV({"switch": "on", "priority": param[2]})
+        else:
+          raise ASPAInputError
+      elif param[1] == "off":
+        as_class.change_ASPV({"switch": "off"})
+      else:
+        raise ASPAInputError
+
+    except ASPAInputError:
+      print("Usage: setASPV [asn] on [1/2/3]", file=sys.stderr)
+      print("       setASPV [asn] off", file=sys.stderr)
+    except KeyError:
+      print("Error: AS " + str(param[0]) + " is NOT registered.", file=sys.stderr)
 
   def get_connection_with(self, as_number):
     c_list = []
@@ -254,6 +430,10 @@ class Interpreter(Cmd):
         return "customer"
 
   def do_run(self, line):
+
+    for as_class in self.as_class_list.get_AS_list().values(): # To reference public_aspa_list when ASPV
+      as_class.set_public_aspa(self.public_aspa_list)
+
     while not self.message_queue.empty():
       m = self.message_queue.get()
       if m["type"] == "update":
