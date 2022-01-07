@@ -206,6 +206,8 @@ class Routing_table:
         if r["best_path"] == True:
           best = r
           break
+      if best == None:
+        raise BestPathNotExist
 
       for p in self.policy:
         if p == "LocPrf":
@@ -228,11 +230,35 @@ class Routing_table:
             continue
           elif new_length > best_length:
             return None
+        elif p == "aspv":
+          if new_route["aspv"] == "Invalid":
+            return None
 
     except KeyError:
-      new_route["best_path"] = True
-      self.table[network] = [new_route]
-      return {"path": path, "come_from": come_from, "network": network}
+      if "aspv" in self.policy:
+        if new_route["aspv"] == "Invalid":
+          new_route["best_path"] = False
+          self.table[network] = [new_route]
+          return None
+        else:
+          new_route["best_path"] = True
+          self.table[network] = [new_route]
+          return {"path": path, "come_from": come_from, "network": network}
+      else:
+        new_route["best_path"] = True
+        self.table[network] = [new_route]
+        return {"path": path, "come_from": come_from, "network": network}
+
+    except BestPathNotExist:
+      if "aspv" in self.policy:
+        if new_route["aspv"] == "Invalid":
+          return None
+        else:
+          new_route["best_path"] = True
+          return {"path": path, "come_from": come_from, "network": network}
+      else:
+        new_route["best_path"] = True
+        return {"path": path, "come_from": come_from, "network": network}
 
   def get_best_path_list(self):
 
@@ -250,6 +276,9 @@ class Routing_table:
 
 class ASPAInputError(Exception):
   # Exception class for application-dependent error
+  pass
+
+class BestPathNotExist(Exception):
   pass
 
 class Interpreter(Cmd):
