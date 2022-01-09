@@ -2,6 +2,7 @@ import sys
 import re
 from cmd import Cmd
 import queue
+import yaml
 
 class AS_class_list:
   def __init__(self):
@@ -484,6 +485,41 @@ class Interpreter(Cmd):
           for new_m in new_update_message_list:
             self.message_queue.put(dict({"type": "update"}, **new_m))
 
+  def do_export(self, line):
+
+    try:
+      if line == "":
+        raise ASPAInputError
+    except ASPAInputError:
+      print("Usage: export [filename]")
+      return
+
+    export_content = {}
+
+    export_content["AS_list"] = []
+    class_list = self.as_class_list.get_AS_list()
+    for v in class_list.values():
+      export_content["AS_list"].append({"AS": v.as_number, "network_address": v.network_address, "policy": v.policy, "routing_table": v.routing_table.get_table()})
+
+    export_content["IP_gen_seed"] = self.as_class_list.ip_gen.index
+
+    export_content["message"] = []
+    tmp_queue = queue.Queue()
+    while not self.message_queue.empty():
+      q = self.message_queue.get()
+      export_content["message"].append(q)
+      tmp_queue.put(q)
+    self.message_queue = tmp_queue
+
+    export_content["connection"] = self.connection_list
+
+    export_content["ASPA"] = self.public_aspa_list
+
+    with open(line, mode="w") as f:
+      yaml.dump(export_content, f)
+
+  def do_import(self, line):
+    pass
 
 ###
 ### MAIN PROGRAM
