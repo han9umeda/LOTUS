@@ -31,6 +31,16 @@ class AS_class_list:
   def get_AS_list(self):
     return self.class_list
 
+  def import_AS_list(self, import_list):
+
+    self.class_list = {}
+    for a in import_list:
+      self.class_list[a["AS"]] = AS_class(a["AS"], a["network_address"])
+      self.class_list[a["AS"]].policy = a["policy"]
+      self.class_list[a["AS"]].routing_table.change_policy(a["policy"])
+      self.class_list[a["AS"]].routing_table.table = a["routing_table"]
+
+
 class IP_address_generator:
   def __init__(self):
     self.index = 1 # To generate unique address
@@ -533,6 +543,8 @@ class Interpreter(Cmd):
     except FileNotFoundError as e:
       print("Error: No such file or directory: " + line, file=sys.stderr)
       return
+
+    self.as_class_list.import_AS_list(import_content["AS_list"])
 
     self.as_class_list.ip_gen.index = import_content["IP_gen_seed"]
 
