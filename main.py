@@ -309,7 +309,7 @@ class Interpreter(Cmd):
       except KeyError:
         print("Error: AS " + str(line) + " is NOT registered.", file=sys.stderr)
     else:
-      print("Usage: addAS [asn]", file=sys.stderr)
+      print("Usage: showAS [asn]", file=sys.stderr)
 
   def do_showASList(self, line):
     if line:
@@ -379,7 +379,7 @@ class Interpreter(Cmd):
             raise ASPAInputError
       self.public_aspa_list[param[0]] = param[1:]
     except ASPAInputError:
-      print("Usage: addASPA [customer_asn] [provider_asns...]")
+      print("Usage: addASPA [customer_asn] [provider_asns...]", file=sys.stderr)
 
   def do_showASPA(self, line):
     if line == "":
@@ -491,7 +491,7 @@ class Interpreter(Cmd):
       if line == "":
         raise ASPAInputError
     except ASPAInputError:
-      print("Usage: export [filename]")
+      print("Usage: export [filename]", file=sys.stderr)
       return
 
     export_content = {}
@@ -519,7 +519,30 @@ class Interpreter(Cmd):
       yaml.dump(export_content, f)
 
   def do_import(self, line):
-    pass
+
+    try:
+      if line == "":
+        raise ASPAInputError
+    except ASPAInputError:
+      print("Usage: import [filename]", file=sys.stderr)
+      return
+
+    try:
+      with open(line, mode="r") as f:
+        import_content = yaml.safe_load(f)
+    except FileNotFoundError as e:
+      print("Error: No such file or directory: " + line, file=sys.stderr)
+      return
+
+    self.as_class_list.ip_gen.index = import_content["IP_gen_seed"]
+
+    self.message_queue = queue.Queue()
+    for m in import_content["message"]:
+      self.message_queue.put(m)
+
+    self.connection_list = import_content["connection"]
+
+    self.public_aspa_list = import_content["ASPA"]
 
 ###
 ### MAIN PROGRAM
