@@ -2,6 +2,7 @@ import sys
 import re
 from cmd import Cmd
 import queue
+import yaml
 
 class AS_class_list:
   def __init__(self):
@@ -29,6 +30,16 @@ class AS_class_list:
 
   def get_AS_list(self):
     return self.class_list
+
+  def import_AS_list(self, import_list):
+
+    self.class_list = {}
+    for a in import_list:
+      self.class_list[a["AS"]] = AS_class(a["AS"], a["network_address"])
+      self.class_list[a["AS"]].policy = a["policy"]
+      self.class_list[a["AS"]].routing_table.change_policy(a["policy"])
+      self.class_list[a["AS"]].routing_table.table = a["routing_table"]
+
 
 class IP_address_generator:
   def __init__(self):
@@ -308,7 +319,7 @@ class Interpreter(Cmd):
       except KeyError:
         print("Error: AS " + str(line) + " is NOT registered.", file=sys.stderr)
     else:
-      print("Usage: addAS [asn]", file=sys.stderr)
+      print("Usage: showAS [asn]", file=sys.stderr)
 
   def do_showASList(self, line):
     if line:
@@ -378,7 +389,7 @@ class Interpreter(Cmd):
             raise ASPAInputError
       self.public_aspa_list[param[0]] = param[1:]
     except ASPAInputError:
-      print("Usage: addASPA [customer_asn] [provider_asns...]")
+      print("Usage: addASPA [customer_asn] [provider_asns...]", file=sys.stderr)
 
   def do_showASPA(self, line):
     if line == "":
@@ -484,6 +495,66 @@ class Interpreter(Cmd):
           for new_m in new_update_message_list:
             self.message_queue.put(dict({"type": "update"}, **new_m))
 
+  def do_export(self, line):
+
+    try:
+      if line == "":
+        raise ASPAInputError
+    except ASPAInputError:
+      print("Usage: export [filename]", file=sys.stderr)
+      return
+
+    export_content = {}
+
+    export_content["AS_list"] = []
+    class_list = self.as_class_list.get_AS_list()
+    for v in class_list.values():
+      export_content["AS_list"].append({"AS": v.as_number, "network_address": v.network_address, "policy": v.policy, "routing_table": v.routing_table.get_table()})
+
+    export_content["IP_gen_seed"] = self.as_class_list.ip_gen.index
+
+    export_content["message"] = []
+    tmp_queue = queue.Queue()
+    while not self.message_queue.empty():
+      q = self.message_queue.get()
+      export_content["message"].append(q)
+      tmp_queue.put(q)
+    self.message_queue = tmp_queue
+
+    export_content["connection"] = self.connection_list
+
+    export_content["ASPA"] = self.public_aspa_list
+
+    with open(line, mode="w") as f:
+      yaml.dump(export_content, f)
+
+  def do_import(self, line):
+
+    try:
+      if line == "":
+        raise ASPAInputError
+    except ASPAInputError:
+      print("Usage: import [filename]", file=sys.stderr)
+      return
+
+    try:
+      with open(line, mode="r") as f:
+        import_content = yaml.safe_load(f)
+    except FileNotFoundError as e:
+      print("Error: No such file or directory: " + line, file=sys.stderr)
+      return
+
+    self.as_class_list.import_AS_list(import_content["AS_list"])
+
+    self.as_class_list.ip_gen.index = import_content["IP_gen_seed"]
+
+    self.message_queue = queue.Queue()
+    for m in import_content["message"]:
+      self.message_queue.put(m)
+
+    self.connection_list = import_content["connection"]
+
+    self.public_aspa_list = import_content["ASPA"]
 
 ###
 ### MAIN PROGRAM
