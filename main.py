@@ -3,6 +3,7 @@ import re
 from cmd import Cmd
 import queue
 import yaml
+import ipaddress
 
 class AS_class_list:
   def __init__(self):
@@ -58,10 +59,36 @@ class AS_class:
     self.routing_table = Routing_table(self.network_address, self.policy)
 
   def show_info(self):
-    print(self.as_number)
-    print(self.network_address)
-    print(self.routing_table.get_table())
-    print(self.policy)
+    print("====================")
+    print(f"AS NUMBER: {self.as_number}")
+    print(f"network: {self.network_address}")
+    print(f"policy: {self.policy}")
+
+    table = self.routing_table.get_table()
+    addr_list = []
+    for addr in table.keys():
+      addr_list.append(ipaddress.ip_network(addr))
+    addr_list.sort()
+
+    print("routing table: (best path: > )")
+    for addr in addr_list:
+      print(str(addr) + ":")
+      for r in table[str(addr)]:
+        path = r["path"]
+        come_from = r["come_from"]
+        LocPrf = r["LocPrf"]
+        try:
+          aspv = r["aspv"]
+          if r["best_path"] == True:
+            print(f"> path: {path}, LocPrf: {LocPrf}, come_from: {come_from}, aspv: {aspv}")
+          else:
+            print(f"  path: {path}, LocPrf: {LocPrf}, come_from: {come_from}, aspv: {aspv}")
+        except KeyError:
+          if r["best_path"] == True:
+            print(f"> path: {path}, LocPrf: {LocPrf}, come_from: {come_from}")
+          else:
+            print(f"  path: {path}, LocPrf: {LocPrf}, come_from: {come_from}")
+    print("====================")
 
   def set_public_aspa(self, public_aspa_list):
     self.routing_table.set_public_aspa(public_aspa_list)
