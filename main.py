@@ -16,15 +16,18 @@ class AS_class_list:
     else:
       print("Error: AS " + str(as_number) + " is already registered.", file=sys.stderr)
 
-  def show_AS_list(self, mode=""):
-    if mode == "sort":
-      keys = list(self.class_list.keys())
+  def show_AS_list(self, param=""):
+
+    keys = list(self.class_list.keys())
+    if "sort" in param:
       keys.sort()
+
+    if "best" in param:
+      for k in keys:
+        self.class_list[k].show_info(mode="best")
+    else:
       for k in keys:
         self.class_list[k].show_info()
-    else:
-      for c in self.class_list.values():
-        c.show_info()
 
   def get_AS(self, as_number):
     return self.class_list[as_number]
@@ -58,7 +61,7 @@ class AS_class:
     self.policy = ["LocPrf", "PathLength"]
     self.routing_table = Routing_table(self.network_address, self.policy)
 
-  def show_info(self):
+  def show_info(self, mode=""):
     print("====================")
     print(f"AS NUMBER: {self.as_number}")
     print(f"network: {self.network_address}")
@@ -81,11 +84,15 @@ class AS_class:
           aspv = r["aspv"]
           if r["best_path"] == True:
             print(f"> path: {path}, LocPrf: {LocPrf}, come_from: {come_from}, aspv: {aspv}")
+          elif mode == "best":
+            continue
           else:
             print(f"  path: {path}, LocPrf: {LocPrf}, come_from: {come_from}, aspv: {aspv}")
         except KeyError:
           if r["best_path"] == True:
             print(f"> path: {path}, LocPrf: {LocPrf}, come_from: {come_from}")
+          elif mode == "best":
+            continue
           else:
             print(f"  path: {path}, LocPrf: {LocPrf}, come_from: {come_from}")
     print("====================")
@@ -350,14 +357,17 @@ class Interpreter(Cmd):
 
   def do_showASList(self, line):
 
-    if line:
-      param = line.split()
-      if "sort" in param:
-        self.as_class_list.show_AS_list("sort")
-      else:
-        print("Usage: showASList [sort]", file=sys.stderr)
-    else:
-      self.as_class_list.show_AS_list()
+
+    param = line.split()
+    self.as_class_list.show_AS_list(param)
+    # if line:
+    #   self.as_class_list.show_AS_list(param)
+    #   # if "sort" in param:
+    #   #   self.as_class_list.show_AS_list("sort")
+    #   # else:
+    #   #   print("Usage: showASList [sort]", file=sys.stderr)
+    # else:
+    #   self.as_class_list.show_AS_list()
 
   def do_addMessage(self, line):
     try:
