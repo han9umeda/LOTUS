@@ -349,11 +349,13 @@ class Interpreter(Cmd):
       print("Usage: showAS [asn]", file=sys.stderr)
 
   def do_showASList(self, line):
+
     if line:
-      if line == "sort":
+      param = line.split()
+      if "sort" in param:
         self.as_class_list.show_AS_list("sort")
       else:
-        print("Error: Unknown Syntax", file=sys.stderr)
+        print("Usage: showASList [sort]", file=sys.stderr)
     else:
       self.as_class_list.show_AS_list()
 
