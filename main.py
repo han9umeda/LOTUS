@@ -84,9 +84,9 @@ class AS_class:
     only_best = False
     address = None
     try:
-      if param.index("best") == 0:
+      if param.index("best") == 0 and len(param) == 2:
         address = param[1]
-      elif param.index("best") == 1:
+      elif param.index("best") == 1 and len(param) == 2:
         address = param[0]
       only_best = True
     except ValueError:
@@ -95,37 +95,18 @@ class AS_class:
 
     table = self.routing_table.get_table()
     addr_list = []
-    for addr in table.keys():
-      addr_list.append(ipaddress.ip_network(addr))
-    addr_list.sort()
+    if address == None:
+      for addr in table.keys():
+        addr_list.append(ipaddress.ip_network(addr))
+      addr_list.sort()
+    else:
+      addr_list.append(address)
 
     print("routing table: (best path: > )")
-    if address == None:
-      for addr in addr_list:
-        print(str(addr) + ":")
-        for r in table[str(addr)]:
-          path = r["path"]
-          come_from = r["come_from"]
-          LocPrf = r["LocPrf"]
-          try:
-            aspv = r["aspv"]
-            if r["best_path"] == True:
-              print(f"> path: {path}, LocPrf: {LocPrf}, come_from: {come_from}, aspv: {aspv}")
-            elif only_best == True:
-              continue
-            else:
-              print(f"  path: {path}, LocPrf: {LocPrf}, come_from: {come_from}, aspv: {aspv}")
-          except KeyError:
-            if r["best_path"] == True:
-              print(f"> path: {path}, LocPrf: {LocPrf}, come_from: {come_from}")
-            elif only_best == True:
-              continue
-            else:
-              print(f"  path: {path}, LocPrf: {LocPrf}, come_from: {come_from}")
-    else:
-      print(str(address) + ":")
+    for addr in addr_list:
+      print(str(addr) + ":")
       try:
-        for r in table[str(address)]:
+        for r in table[str(addr)]:
           path = r["path"]
           come_from = r["come_from"]
           LocPrf = r["LocPrf"]
