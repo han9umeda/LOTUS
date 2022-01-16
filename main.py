@@ -18,6 +18,24 @@ class AS_class_list:
 
   def show_AS_list(self, param=""):
 
+    tmp_param = []
+    for p in param:
+      tmp_param.append(p)
+
+    try:
+      tmp_param.remove("sort")
+    except ValueError:
+      pass
+    try:
+      tmp_param.remove("best")
+    except ValueError:
+      pass
+
+    if len(tmp_param) >= 2:
+      raise ASPAInputError
+    elif len(tmp_param) == 1 and not re.fullmatch("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/[0-9][0-9]" , tmp_param[0]):
+      raise ASPAInputError
+
     keys = list(self.class_list.keys())
     if "sort" in param:
       keys.sort()
@@ -357,17 +375,11 @@ class Interpreter(Cmd):
 
   def do_showASList(self, line):
 
-
     param = line.split()
-    self.as_class_list.show_AS_list(param)
-    # if line:
-    #   self.as_class_list.show_AS_list(param)
-    #   # if "sort" in param:
-    #   #   self.as_class_list.show_AS_list("sort")
-    #   # else:
-    #   #   print("Usage: showASList [sort]", file=sys.stderr)
-    # else:
-    #   self.as_class_list.show_AS_list()
+    try:
+      self.as_class_list.show_AS_list(param)
+    except ASPAInputError:
+      print("Usage: showASList [sort] [best] [address]", file=sys.stderr)
 
   def do_addMessage(self, line):
     try:
