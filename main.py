@@ -38,14 +38,10 @@ class AS_class_list:
 
     keys = list(self.class_list.keys())
     if "sort" in param:
+      param.remove("sort")
       keys.sort()
-
-    if "best" in param:
-      for k in keys:
-        self.class_list[k].show_info(mode="best")
-    else:
-      for k in keys:
-        self.class_list[k].show_info()
+    for k in keys:
+      self.class_list[k].show_info(param)
 
   def get_AS(self, as_number):
     return self.class_list[as_number]
@@ -79,11 +75,23 @@ class AS_class:
     self.policy = ["LocPrf", "PathLength"]
     self.routing_table = Routing_table(self.network_address, self.policy)
 
-  def show_info(self, mode=""):
+  def show_info(self, param):
     print("====================")
     print(f"AS NUMBER: {self.as_number}")
     print(f"network: {self.network_address}")
     print(f"policy: {self.policy}")
+
+    only_best = False
+    address = None
+    try:
+      if param.index("best") == 0:
+        address = param[1]
+      elif param.index("best") == 1:
+        address = param[0]
+      only_best = True
+    except ValueError:
+      if len(param) == 1:
+        address = param[0]
 
     table = self.routing_table.get_table()
     addr_list = []
@@ -92,27 +100,52 @@ class AS_class:
     addr_list.sort()
 
     print("routing table: (best path: > )")
-    for addr in addr_list:
-      print(str(addr) + ":")
-      for r in table[str(addr)]:
-        path = r["path"]
-        come_from = r["come_from"]
-        LocPrf = r["LocPrf"]
-        try:
-          aspv = r["aspv"]
-          if r["best_path"] == True:
-            print(f"> path: {path}, LocPrf: {LocPrf}, come_from: {come_from}, aspv: {aspv}")
-          elif mode == "best":
-            continue
-          else:
-            print(f"  path: {path}, LocPrf: {LocPrf}, come_from: {come_from}, aspv: {aspv}")
-        except KeyError:
-          if r["best_path"] == True:
-            print(f"> path: {path}, LocPrf: {LocPrf}, come_from: {come_from}")
-          elif mode == "best":
-            continue
-          else:
-            print(f"  path: {path}, LocPrf: {LocPrf}, come_from: {come_from}")
+    if address == None:
+      for addr in addr_list:
+        print(str(addr) + ":")
+        for r in table[str(addr)]:
+          path = r["path"]
+          come_from = r["come_from"]
+          LocPrf = r["LocPrf"]
+          try:
+            aspv = r["aspv"]
+            if r["best_path"] == True:
+              print(f"> path: {path}, LocPrf: {LocPrf}, come_from: {come_from}, aspv: {aspv}")
+            elif only_best == True:
+              continue
+            else:
+              print(f"  path: {path}, LocPrf: {LocPrf}, come_from: {come_from}, aspv: {aspv}")
+          except KeyError:
+            if r["best_path"] == True:
+              print(f"> path: {path}, LocPrf: {LocPrf}, come_from: {come_from}")
+            elif only_best == True:
+              continue
+            else:
+              print(f"  path: {path}, LocPrf: {LocPrf}, come_from: {come_from}")
+    else:
+      print(str(address) + ":")
+      try:
+        for r in table[str(address)]:
+          path = r["path"]
+          come_from = r["come_from"]
+          LocPrf = r["LocPrf"]
+          try:
+            aspv = r["aspv"]
+            if r["best_path"] == True:
+              print(f"> path: {path}, LocPrf: {LocPrf}, come_from: {come_from}, aspv: {aspv}")
+            elif only_best == True:
+              continue
+            else:
+              print(f"  path: {path}, LocPrf: {LocPrf}, come_from: {come_from}, aspv: {aspv}")
+          except KeyError:
+            if r["best_path"] == True:
+              print(f"> path: {path}, LocPrf: {LocPrf}, come_from: {come_from}")
+            elif only_best == True:
+              continue
+            else:
+              print(f"  path: {path}, LocPrf: {LocPrf}, come_from: {come_from}")
+      except KeyError:
+        print("No-Path")
     print("====================")
 
   def set_public_aspa(self, public_aspa_list):
