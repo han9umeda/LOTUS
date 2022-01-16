@@ -3,6 +3,7 @@ import re
 from cmd import Cmd
 import queue
 import yaml
+import ipaddress
 
 class AS_class_list:
   def __init__(self):
@@ -15,15 +16,32 @@ class AS_class_list:
     else:
       print("Error: AS " + str(as_number) + " is already registered.", file=sys.stderr)
 
-  def show_AS_list(self, mode=""):
-    if mode == "sort":
-      keys = list(self.class_list.keys())
+  def show_AS_list(self, param=""):
+
+    tmp_param = []
+    for p in param:
+      tmp_param.append(p)
+
+    try:
+      tmp_param.remove("sort")
+    except ValueError:
+      pass
+    try:
+      tmp_param.remove("best")
+    except ValueError:
+      pass
+
+    if len(tmp_param) >= 2:
+      raise ASPAInputError
+    elif len(tmp_param) == 1 and not re.fullmatch("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/[0-9][0-9]" , tmp_param[0]):
+      raise ASPAInputError
+
+    keys = list(self.class_list.keys())
+    if "sort" in param:
+      param.remove("sort")
       keys.sort()
-      for k in keys:
-        self.class_list[k].show_info()
-    else:
-      for c in self.class_list.values():
-        c.show_info()
+    for k in keys:
+      self.class_list[k].show_info(param)
 
   def get_AS(self, as_number):
     return self.class_list[as_number]
@@ -57,11 +75,59 @@ class AS_class:
     self.policy = ["LocPrf", "PathLength"]
     self.routing_table = Routing_table(self.network_address, self.policy)
 
-  def show_info(self):
-    print(self.as_number)
-    print(self.network_address)
-    print(self.routing_table.get_table())
-    print(self.policy)
+  def show_info(self, param):
+    print("====================")
+    print(f"AS NUMBER: {self.as_number}")
+    print(f"network: {self.network_address}")
+    print(f"policy: {self.policy}")
+
+    only_best = False
+    address = None
+    try:
+      if param.index("best") == 0 and len(param) == 2:
+        address = param[1]
+      elif param.index("best") == 1 and len(param) == 2:
+        address = param[0]
+      only_best = True
+    except ValueError:
+      if len(param) == 1:
+        address = param[0]
+
+    table = self.routing_table.get_table()
+    addr_list = []
+    if address == None:
+      for addr in table.keys():
+        addr_list.append(ipaddress.ip_network(addr))
+      addr_list.sort()
+    else:
+      addr_list.append(address)
+
+    print("routing table: (best path: > )")
+    for addr in addr_list:
+      print(str(addr) + ":")
+      try:
+        for r in table[str(addr)]:
+          path = r["path"]
+          come_from = r["come_from"]
+          LocPrf = r["LocPrf"]
+          try:
+            aspv = r["aspv"]
+            if r["best_path"] == True:
+              print(f"> path: {path}, LocPrf: {LocPrf}, come_from: {come_from}, aspv: {aspv}")
+            elif only_best == True:
+              continue
+            else:
+              print(f"  path: {path}, LocPrf: {LocPrf}, come_from: {come_from}, aspv: {aspv}")
+          except KeyError:
+            if r["best_path"] == True:
+              print(f"> path: {path}, LocPrf: {LocPrf}, come_from: {come_from}")
+            elif only_best == True:
+              continue
+            else:
+              print(f"  path: {path}, LocPrf: {LocPrf}, come_from: {come_from}")
+      except KeyError:
+        print("No-Path")
+    print("====================")
 
   def set_public_aspa(self, public_aspa_list):
     self.routing_table.set_public_aspa(public_aspa_list)
@@ -315,20 +381,19 @@ class Interpreter(Cmd):
   def do_showAS(self, line):
     if line.isdecimal():
       try:
-        self.as_class_list.get_AS(line).show_info()
+        self.as_class_list.get_AS(line).show_info("")
       except KeyError:
         print("Error: AS " + str(line) + " is NOT registered.", file=sys.stderr)
     else:
       print("Usage: showAS [asn]", file=sys.stderr)
 
   def do_showASList(self, line):
-    if line:
-      if line == "sort":
-        self.as_class_list.show_AS_list("sort")
-      else:
-        print("Error: Unknown Syntax", file=sys.stderr)
-    else:
-      self.as_class_list.show_AS_list()
+
+    param = line.split()
+    try:
+      self.as_class_list.show_AS_list(param)
+    except ASPAInputError:
+      print("Usage: showASList [sort] [best] [address]", file=sys.stderr)
 
   def do_addMessage(self, line):
     try:
