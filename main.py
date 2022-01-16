@@ -621,6 +621,46 @@ class Interpreter(Cmd):
 
     self.public_aspa_list = import_content["ASPA"]
 
+  def do_genAttack(self, line):
+
+    try:
+      param = line.split()
+      if len(param) != 2:
+        raise ASPAInputError
+      elif not param[0].isdecimal() or not param[1].isdecimal():
+        raise ASPAInputError
+    except ASPAInputError:
+      print("Usage: genAttack [src_asn] [target_asn]", file=sys.stderr)
+      return
+
+    src = param[0]
+    target = param[1]
+
+    try:
+      self.as_class_list.get_AS(src)
+    except KeyError:
+      print(f"Error: AS {src} is NOT registered.", file=sys.stderr)
+      return
+
+    src_connection_list = self.get_connection_with(src)
+    adj_as_list = []
+    for c in src_connection_list:
+      if src == c["src"]:
+        adj_as_list.append(c["dst"])
+      else:
+        adj_as_list.append(c["src"])
+
+    try:
+      target_as_class = self.as_class_list.get_AS(target)
+    except KeyError:
+      print(f"Error: AS {target} is NOT registered.", file=sys.stderr)
+      return
+
+    target_address = target_as_class.network_address
+
+    for adj_as in adj_as_list:
+      self.message_queue.put({"type": "update", "src": str(src), "dst": str(adj_as), "path": f"{src}-{target}", "network": str(target_address)})
+
 ###
 ### MAIN PROGRAM
 ###
