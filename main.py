@@ -381,7 +381,7 @@ class Interpreter(Cmd):
   def do_showAS(self, line):
     if line.isdecimal():
       try:
-        self.as_class_list.get_AS(line).show_info()
+        self.as_class_list.get_AS(line).show_info("")
       except KeyError:
         print("Error: AS " + str(line) + " is NOT registered.", file=sys.stderr)
     else:
