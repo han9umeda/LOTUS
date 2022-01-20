@@ -661,6 +661,20 @@ class Interpreter(Cmd):
     for adj_as in adj_as_list:
       self.message_queue.put({"type": "update", "src": str(src), "dst": str(adj_as), "path": f"{src}-{target}", "network": str(target_address)})
 
+  def do_autoASPA(self, line):
+
+    param = line.split()
+    try:
+      if len(param) != 2 or not param[0].isdecimal() or not param[1].isdecimal():
+        raise ASPAInputError
+
+      self.as_class_list.get_AS(param[0])
+
+    except ASPAInputError:
+      print("Usage: autoASPA [asn] [hop_num]", file=sys.stderr)
+    except KeyError:
+      print("Error: AS " + str(param[0]) + " is NOT registered.", file=sys.stderr)
+
 ###
 ### MAIN PROGRAM
 ###
