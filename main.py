@@ -661,6 +661,44 @@ class Interpreter(Cmd):
     for adj_as in adj_as_list:
       self.message_queue.put({"type": "update", "src": str(src), "dst": str(adj_as), "path": f"{src}-{target}", "network": str(target_address)})
 
+  def do_autoASPA(self, line):
+
+    param = line.split()
+    try:
+      if len(param) != 2 or not param[0].isdecimal() or not param[1].isdecimal():
+        raise ASPAInputError
+
+      self.as_class_list.get_AS(param[0])  # Checking the AS is exist.
+
+    except ASPAInputError:
+      print("Usage: autoASPA [asn] [hop_num]", file=sys.stderr)
+    except KeyError:
+      print("Error: AS " + str(param[0]) + " is NOT registered.", file=sys.stderr)
+
+    customer_as_list = [param[0]]
+    hop_number = int(param[1])
+
+    while hop_number != 0 and len(customer_as_list) != 0:
+
+      next_customer_as_list = []
+      for customer_as in customer_as_list:
+        c_list = self.get_connection_with(customer_as)
+
+        provider_list = []
+        for c in c_list:
+          if self.as_a_is_what_on_c(customer_as, c) == "customer":
+            provider_list.append(c["src"])
+
+        next_customer_as_list += provider_list
+
+        if len(provider_list) == 0:  # There is NOT provider AS.
+          provider_list = [0]
+
+        self.public_aspa_list[customer_as] = provider_list  # addASPA
+
+      hop_number -= 1
+      customer_as_list = list(set(next_customer_as_list))
+
 ###
 ### MAIN PROGRAM
 ###
