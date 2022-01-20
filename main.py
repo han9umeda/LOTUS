@@ -675,6 +675,22 @@ class Interpreter(Cmd):
     except KeyError:
       print("Error: AS " + str(param[0]) + " is NOT registered.", file=sys.stderr)
 
+    customer_as_list = [param[0]]
+    hop_number = param[1]
+
+    c_list = self.get_connection_with(param[0])
+    provider_list = []
+    for c in c_list:
+      if self.as_a_is_what_on_c(param[0], c) == "customer":
+        provider_list.append(c["src"])
+
+    if len(provider_list) == 0:  # There is NOT provider AS.
+      provider_list = [0]
+
+    self.public_aspa_list[param[0]] = provider_list
+    print("DEBUG: ")
+    print(self.public_aspa_list)
+
 ###
 ### MAIN PROGRAM
 ###
