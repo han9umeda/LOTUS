@@ -672,8 +672,10 @@ class Interpreter(Cmd):
 
     except ASPAInputError:
       print("Usage: autoASPA [asn] [hop_num]", file=sys.stderr)
+      return
     except KeyError:
       print("Error: AS " + str(param[0]) + " is NOT registered.", file=sys.stderr)
+      return
 
     customer_as_list = [param[0]]
     hop_number = int(param[1])
