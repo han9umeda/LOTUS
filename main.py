@@ -661,6 +661,45 @@ class Interpreter(Cmd):
     for adj_as in adj_as_list:
       self.message_queue.put({"type": "update", "src": str(src), "dst": str(adj_as), "path": f"{src}-{target}", "network": str(target_address)})
 
+  def do_genOutsideAttack(self, line):
+
+    try:
+      param = line.split()
+      if len(param) != 3 or not param[0].isdecimal() or not param[1].isdecimal() or not int(param[2]) == 1:
+        raise ASPAInputError
+    except ASPAInputError:
+      print("Usage: genOutsideAttack [via_asn] [target_asn] [hop_num=1]", file=sys.stderr)
+      return
+
+    via = param[0]
+    target = param[1]
+
+    try:
+      self.as_class_list.get_AS(via)
+    except KeyError:
+      print(f"Error: AS {via} is NOT registered.", file=sys.stderr)
+      return
+
+    try:
+      target_as_class = self.as_class_list.get_AS(target)
+    except KeyError:
+      print(f"Error: AS {target} is NOT registered.", file=sys.stderr)
+      return
+
+    outside_as = 64512  # Private AS Number
+    while True:
+      try:
+        self.as_class_list.get_AS(str(outside_as))
+        outside_as += 1
+      except KeyError:
+        break
+    self.as_class_list.add_AS(str(outside_as))
+    self.connection_list.append({"type": "down", "src": str(via), "dst": str(outside_as)})
+
+    target_address = target_as_class.network_address
+
+    self.message_queue.put({"type": "update", "src": str(outside_as), "dst": str(via), "path": f"{outside_as}-{target}", "network": str(target_address)})
+
   def do_autoASPA(self, line):
 
     param = line.split()
