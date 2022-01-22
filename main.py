@@ -661,6 +661,31 @@ class Interpreter(Cmd):
     for adj_as in adj_as_list:
       self.message_queue.put({"type": "update", "src": str(src), "dst": str(adj_as), "path": f"{src}-{target}", "network": str(target_address)})
 
+  def do_genOutsideAttack(self, line):
+
+    try:
+      param = line.split()
+      if len(param) != 3 or not param[0].isdecimal() or not param[1].isdecimal() or not int(param[2]) == 1:
+        raise ASPAInputError
+    except ASPAInputError:
+      print("Usage: genOutsideAttack [via_asn] [target_asn] [hop_num=1]", file=sys.stderr)
+      return
+
+    via = param[0]
+    target = param[1]
+
+    try:
+      self.as_class_list.get_AS(via)
+    except KeyError:
+      print("Error: AS " + str(via) + " is NOT registered.", file=sys.stderr)
+      return
+
+    try:
+      self.as_class_list.get_AS(target)
+    except KeyError:
+      print("Error: AS " + str(target) + " is NOT registered.", file=sys.stderr)
+      return
+
   def do_autoASPA(self, line):
 
     param = line.split()
