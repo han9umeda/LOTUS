@@ -677,14 +677,28 @@ class Interpreter(Cmd):
     try:
       self.as_class_list.get_AS(via)
     except KeyError:
-      print("Error: AS " + str(via) + " is NOT registered.", file=sys.stderr)
+      print(f"Error: AS {via} is NOT registered.", file=sys.stderr)
       return
 
     try:
-      self.as_class_list.get_AS(target)
+      target_as_class = self.as_class_list.get_AS(target)
     except KeyError:
-      print("Error: AS " + str(target) + " is NOT registered.", file=sys.stderr)
+      print(f"Error: AS {target} is NOT registered.", file=sys.stderr)
       return
+
+    outside_as = 64512  # Private AS Number
+    while True:
+      try:
+        self.as_class_list.get_AS(str(outside_as))
+        outside_as += 1
+      except KeyError:
+        break
+    self.as_class_list.add_AS(str(outside_as))
+    self.connection_list.append({"type": "down", "src": str(via), "dst": str(outside_as)})
+
+    target_address = target_as_class.network_address
+
+    self.message_queue.put({"type": "update", "src": str(outside_as), "dst": str(via), "path": f"{outside_as}-{target}", "network": str(target_address)})
 
   def do_autoASPA(self, line):
 
