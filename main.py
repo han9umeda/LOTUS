@@ -366,8 +366,16 @@ class Interpreter(Cmd):
     self.connection_list = []
     self.public_aspa_list = {}
 
-  intro = "=== This is ASPA simulator. ==="
-  prompt = "aspa_simulation >> "
+  intro = """
+===^^^^^^^^^^^=============================================
+=== \/ \ / \/ =============================================
+== - \V V V/ - ============================================
+= (( ( \ / ) )) ===========================================
+====== LOTUS (Lightweight rOuting simUlator with aSpa) ====
+====== 2022 Naoki Umeda at Osaka University ===============
+===========================================================
+"""
+  prompt = "LOTUS >> "
 
   def do_exit(self, line):
     return True
