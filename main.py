@@ -32,9 +32,9 @@ class AS_class_list:
       pass
 
     if len(tmp_param) >= 2:
-      raise ASPAInputError
+      raise LOTUSInputError
     elif len(tmp_param) == 1 and not re.fullmatch("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/[0-9][0-9]" , tmp_param[0]):
-      raise ASPAInputError
+      raise LOTUSInputError
 
     keys = list(self.class_list.keys())
     if "sort" in param:
@@ -351,7 +351,7 @@ class Routing_table:
   def get_table(self):
     return self.table
 
-class ASPAInputError(Exception):
+class LOTUSInputError(Exception):
   # Exception class for application-dependent error
   pass
 
@@ -400,13 +400,13 @@ class Interpreter(Cmd):
     param = line.split()
     try:
       self.as_class_list.show_AS_list(param)
-    except ASPAInputError:
+    except LOTUSInputError:
       print("Usage: showASList [sort] [best] [address]", file=sys.stderr)
 
   def do_addMessage(self, line):
     try:
       if line == "":
-        raise ASPAInputError
+        raise LOTUSInputError
       param = line.split()
       if len(param) == 2 and param[0] == "init" and param[1].isdecimal():          # ex) addMessage init 12
         self.message_queue.put({"type": "init", "src": str(param[1])})
@@ -414,8 +414,8 @@ class Interpreter(Cmd):
            param[2].isdecimal() and re.fullmatch("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/[0-9][0-9]" , param[4]): # ex) addMessage update 12 34 54-12 10.1.1.0/24
         self.message_queue.put({"type": "update", "src": str(param[1]), "dst": str(param[2]), "path": str(param[3]), "network": str(param[4])})
       else:
-        raise ASPAInputError
-    except ASPAInputError:
+        raise LOTUSInputError
+    except LOTUSInputError:
       print("Usage: addMessage init [src_asn]", file=sys.stderr)
       print("       addMessage update [src_asn] [dst_asn] [path] [network]", file=sys.stderr)
 
@@ -440,10 +440,10 @@ class Interpreter(Cmd):
         elif param[0] == "down":
           self.connection_list.append({"type": "down", "src": param[1], "dst": param[2]})
         else:
-          raise ASPAInputError
+          raise LOTUSInputError
       else:
-        raise ASPAInputError
-    except ASPAInputError:
+        raise LOTUSInputError
+    except LOTUSInputError:
       print("Usage: addConnection peer [src_asn] [dst_asn]", file=sys.stderr)
       print("       addConnection down [src_asn] [dst_asn]", file=sys.stderr)
 
@@ -455,13 +455,13 @@ class Interpreter(Cmd):
     param = line.split()
     try:
       if len(param) < 2:
-        raise ASPAInputError
+        raise LOTUSInputError
       else:
         for p in param:
           if not p.isdecimal():
-            raise ASPAInputError
+            raise LOTUSInputError
       self.public_aspa_list[param[0]] = param[1:]
-    except ASPAInputError:
+    except LOTUSInputError:
       print("Usage: addASPA [customer_asn] [provider_asns...]", file=sys.stderr)
 
   def do_showASPA(self, line):
@@ -477,21 +477,21 @@ class Interpreter(Cmd):
     param = line.split()
     try:
       if len(param) < 2:
-        raise ASPAInputError
+        raise LOTUSInputError
       if not param[0].isdecimal():
-        raise ASPAInputError
+        raise LOTUSInputError
       as_class = self.as_class_list.get_AS(param[0])
       if param[1] == "on":
         if re.fullmatch("1|2|3", param[2]):
           as_class.change_ASPV({"switch": "on", "priority": param[2]})
         else:
-          raise ASPAInputError
+          raise LOTUSInputError
       elif param[1] == "off":
         as_class.change_ASPV({"switch": "off"})
       else:
-        raise ASPAInputError
+        raise LOTUSInputError
 
-    except ASPAInputError:
+    except LOTUSInputError:
       print("Usage: setASPV [asn] on [1/2/3]", file=sys.stderr)
       print("       setASPV [asn] off", file=sys.stderr)
     except KeyError:
@@ -572,8 +572,8 @@ class Interpreter(Cmd):
 
     try:
       if line == "":
-        raise ASPAInputError
-    except ASPAInputError:
+        raise LOTUSInputError
+    except LOTUSInputError:
       print("Usage: export [filename]", file=sys.stderr)
       return
 
@@ -605,8 +605,8 @@ class Interpreter(Cmd):
 
     try:
       if line == "":
-        raise ASPAInputError
-    except ASPAInputError:
+        raise LOTUSInputError
+    except LOTUSInputError:
       print("Usage: import [filename]", file=sys.stderr)
       return
 
@@ -634,10 +634,10 @@ class Interpreter(Cmd):
     try:
       param = line.split()
       if len(param) != 2:
-        raise ASPAInputError
+        raise LOTUSInputError
       elif not param[0].isdecimal() or not param[1].isdecimal():
-        raise ASPAInputError
-    except ASPAInputError:
+        raise LOTUSInputError
+    except LOTUSInputError:
       print("Usage: genAttack [src_asn] [target_asn]", file=sys.stderr)
       return
 
@@ -674,8 +674,8 @@ class Interpreter(Cmd):
     try:
       param = line.split()
       if len(param) != 3 or not param[0].isdecimal() or not param[1].isdecimal() or not int(param[2]) == 1:
-        raise ASPAInputError
-    except ASPAInputError:
+        raise LOTUSInputError
+    except LOTUSInputError:
       print("Usage: genOutsideAttack [via_asn] [target_asn] [hop_num=1]", file=sys.stderr)
       return
 
@@ -713,11 +713,11 @@ class Interpreter(Cmd):
     param = line.split()
     try:
       if len(param) != 2 or not param[0].isdecimal() or not param[1].isdecimal():
-        raise ASPAInputError
+        raise LOTUSInputError
 
       self.as_class_list.get_AS(param[0])  # Checking the AS is exist.
 
-    except ASPAInputError:
+    except LOTUSInputError:
       print("Usage: autoASPA [asn] [hop_num]", file=sys.stderr)
       return
     except KeyError:
