@@ -371,7 +371,7 @@ class Interpreter(Cmd):
 === \/ \ / \/ =============================================
 == - \V V V/ - ============================================
 = (( ( \ / ) )) ===========================================
-====== LOTUS (Lightweight rOuting simUlator with aSpa) ====
+====== LOTUS (Lightweight rOuTing simUlator with aSpa) ====
 ====== 2022 Naoki Umeda at Osaka University ===============
 ===========================================================
 """
