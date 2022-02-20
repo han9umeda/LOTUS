@@ -31,17 +31,24 @@ class AS_class_list:
     except ValueError:
       pass
 
+    address = None
     if len(tmp_param) >= 2:
       raise LOTUSInputError
     elif len(tmp_param) == 1 and not re.fullmatch("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/[0-9][0-9]" , tmp_param[0]):
       raise LOTUSInputError
+    elif len(tmp_param) == 1:
+      address = tmp_param[0]
 
     keys = list(self.class_list.keys())
     if "sort" in param:
       param.remove("sort")
       keys.sort()
+
+    best_flag = False
+    if "best" in param:
+      best_flag = True
     for k in keys:
-      self.class_list[k].show_info(param)
+      self.class_list[k].show_info(only_best=best_flag, address=address)
 
   def get_AS(self, as_number):
     return self.class_list[as_number]
@@ -75,23 +82,11 @@ class AS_class:
     self.policy = ["LocPrf", "PathLength"]
     self.routing_table = Routing_table(self.network_address, self.policy)
 
-  def show_info(self, param):
+  def show_info(self, only_best=False, address=None):
     print("====================")
     print(f"AS NUMBER: {self.as_number}")
     print(f"network: {self.network_address}")
     print(f"policy: {self.policy}")
-
-    only_best = False
-    address = None
-    try:
-      if param.index("best") == 0 and len(param) == 2:
-        address = param[1]
-      elif param.index("best") == 1 and len(param) == 2:
-        address = param[0]
-      only_best = True
-    except ValueError:
-      if len(param) == 1:
-        address = param[0]
 
     table = self.routing_table.get_table()
     addr_list = []
@@ -389,7 +384,7 @@ class Interpreter(Cmd):
   def do_showAS(self, line):
     if line.isdecimal():
       try:
-        self.as_class_list.get_AS(line).show_info("")
+        self.as_class_list.get_AS(line).show_info()
       except KeyError:
         print("Error: AS " + str(line) + " is NOT registered.", file=sys.stderr)
     else:
