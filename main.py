@@ -619,6 +619,21 @@ class Interpreter(Cmd):
 
     self.public_aspa_list = import_content["ASPA"]
 
+  def chain_search_ASPA(self, customer_as):
+
+    try:
+      prov_list = self.public_aspa_list[customer_as]
+    except KeyError:
+      return [customer_as]
+    if str(prov_list[0]) == "0":
+      return [customer_as]
+
+    ret_list = []
+    for prov in prov_list:
+      ret_list.extend(self.chain_search_ASPA(prov))
+    edited_list = [f"{ret}-{customer_as}" for ret in ret_list]
+    return edited_list
+
   def do_genAttack(self, line):
 
     ASPA_utilize = False
@@ -663,13 +678,13 @@ class Interpreter(Cmd):
 
     attack_path_list = []
     if ASPA_utilize == True:
-      for prov in self.public_aspa_list[target]:
-        attack_path_list.append(f"{src}-{prov}-{target}")
+      generated_path = self.chain_search_ASPA(target)
+      attack_path_list = [f"{src}-{path}" for path in generated_path]
     elif ASPA_utilize == False:
       attack_path_list.append(f"{src}-{target}")
 
-    for adj_as in adj_as_list:
-      for path in attack_path_list:
+    for path in attack_path_list:
+      for adj_as in adj_as_list:
         self.message_queue.put({"type": "update", "src": str(src), "dst": str(adj_as), "path": path, "network": str(target_address)})
 
   def do_genOutsideAttack(self, line):
