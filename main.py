@@ -621,16 +621,23 @@ class Interpreter(Cmd):
 
   def do_genAttack(self, line):
 
+    ASPA_utilize = False
     try:
       param = line.split()
+      if "utilize" in param:
+        ASPA_utilize = True
+        param.remove("utilize")
+
       if len(param) != 2:
         raise LOTUSInputError
       elif not param[0].isdecimal() or not param[1].isdecimal():
         raise LOTUSInputError
     except LOTUSInputError:
-      print("Usage: genAttack [src_asn] [target_asn]", file=sys.stderr)
+      print("Usage: genAttack [utilize] [src_asn] [target_asn]", file=sys.stderr)
       return
 
+    print("DEBUG: flag")
+    print(ASPA_utilize)
     src = param[0]
     target = param[1]
 
@@ -640,6 +647,12 @@ class Interpreter(Cmd):
       print(f"Error: AS {src} is NOT registered.", file=sys.stderr)
       return
 
+    try:
+      target_as_class = self.as_class_list.get_AS(target)
+    except KeyError:
+      print(f"Error: AS {target} is NOT registered.", file=sys.stderr)
+      return
+
     src_connection_list = self.get_connection_with(src)
     adj_as_list = []
     for c in src_connection_list:
@@ -647,12 +660,6 @@ class Interpreter(Cmd):
         adj_as_list.append(c["dst"])
       else:
         adj_as_list.append(c["src"])
-
-    try:
-      target_as_class = self.as_class_list.get_AS(target)
-    except KeyError:
-      print(f"Error: AS {target} is NOT registered.", file=sys.stderr)
-      return
 
     target_address = target_as_class.network_address
 
