@@ -619,16 +619,36 @@ class Interpreter(Cmd):
 
     self.public_aspa_list = import_content["ASPA"]
 
-  def do_genAttack(self, line):
+  def chain_search_ASPA(self, customer_as):
 
     try:
+      prov_list = self.public_aspa_list[customer_as]
+    except KeyError:
+      return [customer_as]
+    if str(prov_list[0]) == "0":
+      return [customer_as]
+
+    ret_list = []
+    for prov in prov_list:
+      ret_list.extend(self.chain_search_ASPA(prov))
+    edited_list = [f"{ret}-{customer_as}" for ret in ret_list]
+    return edited_list
+
+  def do_genAttack(self, line):
+
+    ASPA_utilize = False
+    try:
       param = line.split()
+      if "utilize" in param:
+        ASPA_utilize = True
+        param.remove("utilize")
+
       if len(param) != 2:
         raise LOTUSInputError
       elif not param[0].isdecimal() or not param[1].isdecimal():
         raise LOTUSInputError
     except LOTUSInputError:
-      print("Usage: genAttack [src_asn] [target_asn]", file=sys.stderr)
+      print("Usage: genAttack [utilize] [src_asn] [target_asn]", file=sys.stderr)
       return
 
     src = param[0]
@@ -640,6 +660,12 @@ class Interpreter(Cmd):
       print(f"Error: AS {src} is NOT registered.", file=sys.stderr)
       return
 
+    try:
+      target_as_class = self.as_class_list.get_AS(target)
+    except KeyError:
+      print(f"Error: AS {target} is NOT registered.", file=sys.stderr)
+      return
+
     src_connection_list = self.get_connection_with(src)
     adj_as_list = []
     for c in src_connection_list:
@@ -648,16 +674,18 @@ class Interpreter(Cmd):
       else:
         adj_as_list.append(c["src"])
 
-    try:
-      target_as_class = self.as_class_list.get_AS(target)
-    except KeyError:
-      print(f"Error: AS {target} is NOT registered.", file=sys.stderr)
-      return
-
     target_address = target_as_class.network_address
 
-    for adj_as in adj_as_list:
-      self.message_queue.put({"type": "update", "src": str(src), "dst": str(adj_as), "path": f"{src}-{target}", "network": str(target_address)})
+    attack_path_list = []
+    if ASPA_utilize == True:
+      generated_path = self.chain_search_ASPA(target)
+      attack_path_list = [f"{src}-{path}" for path in generated_path]
+    elif ASPA_utilize == False:
+      attack_path_list.append(f"{src}-{target}")
+
+    for path in attack_path_list:
+      for adj_as in adj_as_list:
+        self.message_queue.put({"type": "update", "src": str(src), "dst": str(adj_as), "path": path, "network": str(target_address)})
 
   def do_genOutsideAttack(self, line):
 
