@@ -18,35 +18,27 @@ class AS_class_list:
 
   def show_AS_list(self, param=""):
 
-    tmp_param = []
-    for p in param:
-      tmp_param.append(p)
-
-    try:
-      tmp_param.remove("sort")
-    except ValueError:
-      pass
-    try:
-      tmp_param.remove("best")
-    except ValueError:
-      pass
-
-    address = None
-    if len(tmp_param) >= 2:
-      raise LOTUSInputError
-    elif len(tmp_param) == 1 and not re.fullmatch("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/[0-9][0-9]" , tmp_param[0]):
-      raise LOTUSInputError
-    elif len(tmp_param) == 1:
-      address = tmp_param[0]
-
-    keys = list(self.class_list.keys())
-    if "sort" in param:
-      param.remove("sort")
-      keys.sort()
-
+    sort_flag = False
     best_flag = False
+    if "sort" in param:
+      sort_flag = True
+      param.remove("sort")
     if "best" in param:
       best_flag = True
+      param.remove("best")
+
+    address = None
+    if len(param) >= 2:
+      raise LOTUSInputError
+    elif len(param) == 1 and not re.fullmatch("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/[0-9][0-9]" , param[0]):
+      raise LOTUSInputError
+    elif len(param) == 1:
+      address = param[0]
+
+    keys = list(self.class_list.keys())
+    if sort_flag == True:
+      keys.sort()
+
     for k in keys:
       self.class_list[k].show_info(only_best=best_flag, address=address)
 
