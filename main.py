@@ -16,24 +16,7 @@ class AS_class_list:
     else:
       print("Error: AS " + str(as_number) + " is already registered.", file=sys.stderr)
 
-  def show_AS_list(self, param=""):
-
-    sort_flag = False
-    best_flag = False
-    if "sort" in param:
-      sort_flag = True
-      param.remove("sort")
-    if "best" in param:
-      best_flag = True
-      param.remove("best")
-
-    address = None
-    if len(param) >= 2:
-      raise LOTUSInputError
-    elif len(param) == 1 and not re.fullmatch("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/[0-9][0-9]" , param[0]):
-      raise LOTUSInputError
-    elif len(param) == 1:
-      address = param[0]
+  def show_AS_list(self, sort_flag, best_flag, address):
 
     keys = list(self.class_list.keys())
     if sort_flag == True:
@@ -386,7 +369,24 @@ class Interpreter(Cmd):
 
     param = line.split()
     try:
-      self.as_class_list.show_AS_list(param)
+      sort_flag = False
+      best_flag = False
+      if "sort" in param:
+        sort_flag = True
+        param.remove("sort")
+      if "best" in param:
+        best_flag = True
+        param.remove("best")
+
+      address = None
+      if len(param) >= 2:
+        raise LOTUSInputError
+      elif len(param) == 1 and not re.fullmatch("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/[0-9][0-9]" , param[0]):
+        raise LOTUSInputError
+      elif len(param) == 1:
+        address = param[0]
+
+      self.as_class_list.show_AS_list(sort_flag, best_flag, address)
     except LOTUSInputError:
       print("Usage: showASList [sort] [best] [address]", file=sys.stderr)
 
