@@ -636,8 +636,6 @@ class Interpreter(Cmd):
       print("Usage: genAttack [utilize] [src_asn] [target_asn]", file=sys.stderr)
       return
 
-    print("DEBUG: flag")
-    print(ASPA_utilize)
     src = param[0]
     target = param[1]
 
@@ -663,8 +661,16 @@ class Interpreter(Cmd):
 
     target_address = target_as_class.network_address
 
+    attack_path_list = []
+    if ASPA_utilize == True:
+      for prov in self.public_aspa_list[target]:
+        attack_path_list.append(f"{src}-{prov}-{target}")
+    elif ASPA_utilize == False:
+      attack_path_list.append(f"{src}-{target}")
+
     for adj_as in adj_as_list:
-      self.message_queue.put({"type": "update", "src": str(src), "dst": str(adj_as), "path": f"{src}-{target}", "network": str(target_address)})
+      for path in attack_path_list:
+        self.message_queue.put({"type": "update", "src": str(src), "dst": str(adj_as), "path": path, "network": str(target_address)})
 
   def do_genOutsideAttack(self, line):
 
