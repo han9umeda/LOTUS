@@ -368,9 +368,11 @@ class Interpreter(Cmd):
   def do_showASList(self, line):
 
     param = line.split()
+
+    sort_flag = False
+    best_flag = False
+    address = None
     try:
-      sort_flag = False
-      best_flag = False
       if "sort" in param:
         sort_flag = True
         param.remove("sort")
@@ -378,17 +380,18 @@ class Interpreter(Cmd):
         best_flag = True
         param.remove("best")
 
-      address = None
-      if len(param) >= 2:
-        raise LOTUSInputError
-      elif len(param) == 1 and not re.fullmatch("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/[0-9][0-9]" , param[0]):
-        raise LOTUSInputError
-      elif len(param) == 1:
+      if len(param) == 0:
+        address = None
+      elif len(param) == 1 and re.fullmatch("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/[0-9][0-9]" , param[0]):
         address = param[0]
+      else:
+        raise LOTUSInputError
 
-      self.as_class_list.show_AS_list(sort_flag, best_flag, address)
     except LOTUSInputError:
       print("Usage: showASList [sort] [best] [address]", file=sys.stderr)
+      return
+
+    self.as_class_list.show_AS_list(sort_flag, best_flag, address)
 
   def do_addMessage(self, line):
     try:
