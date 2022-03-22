@@ -689,12 +689,17 @@ class Interpreter(Cmd):
 
   def do_genOutsideAttack(self, line):
 
+    ASPA_utilize = False
     try:
       param = line.split()
+      if "utilize" in param:
+        ASPA_utilize = True
+        param.remove("utilize")
+
       if len(param) != 3 or not param[0].isdecimal() or not param[1].isdecimal() or not int(param[2]) == 1:
         raise LOTUSInputError
     except LOTUSInputError:
-      print("Usage: genOutsideAttack [via_asn] [target_asn] [hop_num=1]", file=sys.stderr)
+      print("Usage: genOutsideAttack [utilize] [via_asn] [target_asn] [hop_num=1]", file=sys.stderr)
       return
 
     via = param[0]
@@ -724,7 +729,15 @@ class Interpreter(Cmd):
 
     target_address = target_as_class.network_address
 
-    self.message_queue.put({"type": "update", "src": str(outside_as), "dst": str(via), "path": f"{outside_as}-{target}", "network": str(target_address)})
+    attack_path_list = []
+    if ASPA_utilize == True:
+      generated_path = self.chain_search_ASPA(target)
+      attack_path_list = [f"{outside_as}-{path}" for path in generated_path]
+    elif ASPA_utilize == False:
+      attack_path_list.append(f"{outside_as}-{target}")
+
+    for path in attack_path_list:
+      self.message_queue.put({"type": "update", "src": str(outside_as), "dst": str(via), "path": path, "network": str(target_address)})
 
   def do_autoASPA(self, line):
 
