@@ -689,8 +689,13 @@ class Interpreter(Cmd):
 
   def do_genOutsideAttack(self, line):
 
+    ASPA_utilize = False
     try:
       param = line.split()
+      if "utilize" in param:
+        ASPA_utilize = True
+        param.remove("utilize")
+
       if len(param) != 3 or not param[0].isdecimal() or not param[1].isdecimal() or not int(param[2]) == 1:
         raise LOTUSInputError
     except LOTUSInputError:
