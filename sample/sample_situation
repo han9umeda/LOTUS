@@ -1,0 +1,17 @@
+addAS 1
+addAS 10
+addAS 11
+addAS 12
+addAS 100
+addAS 200
+addConnection down 1 10
+addConnection down 10 100
+addConnection down 10 200
+addConnection peer 10 11
+addConnection peer 11 12
+autoASPA 100 1
+setASPV 1 on 1
+setASPV 1 on 1
+addAllASInit
+run
+showASList
