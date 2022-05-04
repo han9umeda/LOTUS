@@ -11,7 +11,6 @@ addConnection peer 10 11
 addConnection peer 11 12
 autoASPA 100 1
 setASPV 1 on 1
-setASPV 1 on 1
 addAllASInit
 run
 showASList
