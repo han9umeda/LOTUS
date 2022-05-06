@@ -16,32 +16,14 @@ class AS_class_list:
     else:
       print("Error: AS " + str(as_number) + " is already registered.", file=sys.stderr)
 
-  def show_AS_list(self, param=""):
-
-    tmp_param = []
-    for p in param:
-      tmp_param.append(p)
-
-    try:
-      tmp_param.remove("sort")
-    except ValueError:
-      pass
-    try:
-      tmp_param.remove("best")
-    except ValueError:
-      pass
-
-    if len(tmp_param) >= 2:
-      raise LOTUSInputError
-    elif len(tmp_param) == 1 and not re.fullmatch("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/[0-9][0-9]" , tmp_param[0]):
-      raise LOTUSInputError
+  def show_AS_list(self, sort_flag, best_flag, address):
 
     keys = list(self.class_list.keys())
-    if "sort" in param:
-      param.remove("sort")
+    if sort_flag == True:
       keys.sort()
+
     for k in keys:
-      self.class_list[k].show_info(param)
+      self.class_list[k].show_info(only_best=best_flag, address=address)
 
   def get_AS(self, as_number):
     return self.class_list[as_number]
@@ -75,23 +57,11 @@ class AS_class:
     self.policy = ["LocPrf", "PathLength"]
     self.routing_table = Routing_table(self.network_address, self.policy)
 
-  def show_info(self, param):
+  def show_info(self, only_best=False, address=None):
     print("====================")
     print(f"AS NUMBER: {self.as_number}")
     print(f"network: {self.network_address}")
     print(f"policy: {self.policy}")
-
-    only_best = False
-    address = None
-    try:
-      if param.index("best") == 0 and len(param) == 2:
-        address = param[1]
-      elif param.index("best") == 1 and len(param) == 2:
-        address = param[0]
-      only_best = True
-    except ValueError:
-      if len(param) == 1:
-        address = param[0]
 
     table = self.routing_table.get_table()
     addr_list = []
@@ -389,7 +359,7 @@ class Interpreter(Cmd):
   def do_showAS(self, line):
     if line.isdecimal():
       try:
-        self.as_class_list.get_AS(line).show_info("")
+        self.as_class_list.get_AS(line).show_info()
       except KeyError:
         print("Error: AS " + str(line) + " is NOT registered.", file=sys.stderr)
     else:
@@ -398,10 +368,30 @@ class Interpreter(Cmd):
   def do_showASList(self, line):
 
     param = line.split()
+
+    sort_flag = False
+    best_flag = False
+    address = None
     try:
-      self.as_class_list.show_AS_list(param)
+      if "sort" in param:
+        sort_flag = True
+        param.remove("sort")
+      if "best" in param:
+        best_flag = True
+        param.remove("best")
+
+      if len(param) == 0:
+        address = None
+      elif len(param) == 1 and re.fullmatch("((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])/[0-9][0-9]" , param[0]):
+        address = param[0]
+      else:
+        raise LOTUSInputError
+
     except LOTUSInputError:
       print("Usage: showASList [sort] [best] [address]", file=sys.stderr)
+      return
+
+    self.as_class_list.show_AS_list(sort_flag, best_flag, address)
 
   def do_addMessage(self, line):
     try:
@@ -629,16 +619,36 @@ class Interpreter(Cmd):
 
     self.public_aspa_list = import_content["ASPA"]
 
-  def do_genAttack(self, line):
+  def chain_search_ASPA(self, customer_as):
 
     try:
+      prov_list = self.public_aspa_list[customer_as]
+    except KeyError:
+      return [customer_as]
+    if str(prov_list[0]) == "0":
+      return [customer_as]
+
+    ret_list = []
+    for prov in prov_list:
+      ret_list.extend(self.chain_search_ASPA(prov))
+    edited_list = [f"{ret}-{customer_as}" for ret in ret_list]
+    return edited_list
+
+  def do_genAttack(self, line):
+
+    ASPA_utilize = False
+    try:
       param = line.split()
+      if "utilize" in param:
+        ASPA_utilize = True
+        param.remove("utilize")
+
       if len(param) != 2:
         raise LOTUSInputError
       elif not param[0].isdecimal() or not param[1].isdecimal():
         raise LOTUSInputError
     except LOTUSInputError:
-      print("Usage: genAttack [src_asn] [target_asn]", file=sys.stderr)
+      print("Usage: genAttack [utilize] [src_asn] [target_asn]", file=sys.stderr)
       return
 
     src = param[0]
@@ -650,6 +660,12 @@ class Interpreter(Cmd):
       print(f"Error: AS {src} is NOT registered.", file=sys.stderr)
       return
 
+    try:
+      target_as_class = self.as_class_list.get_AS(target)
+    except KeyError:
+      print(f"Error: AS {target} is NOT registered.", file=sys.stderr)
+      return
+
     src_connection_list = self.get_connection_with(src)
     adj_as_list = []
     for c in src_connection_list:
@@ -658,25 +674,32 @@ class Interpreter(Cmd):
       else:
         adj_as_list.append(c["src"])
 
-    try:
-      target_as_class = self.as_class_list.get_AS(target)
-    except KeyError:
-      print(f"Error: AS {target} is NOT registered.", file=sys.stderr)
-      return
-
     target_address = target_as_class.network_address
 
-    for adj_as in adj_as_list:
-      self.message_queue.put({"type": "update", "src": str(src), "dst": str(adj_as), "path": f"{src}-{target}", "network": str(target_address)})
+    attack_path_list = []
+    if ASPA_utilize == True:
+      generated_path = self.chain_search_ASPA(target)
+      attack_path_list = [f"{src}-{path}" for path in generated_path]
+    elif ASPA_utilize == False:
+      attack_path_list.append(f"{src}-{target}")
+
+    for path in attack_path_list:
+      for adj_as in adj_as_list:
+        self.message_queue.put({"type": "update", "src": str(src), "dst": str(adj_as), "path": path, "network": str(target_address)})
 
   def do_genOutsideAttack(self, line):
 
+    ASPA_utilize = False
     try:
       param = line.split()
+      if "utilize" in param:
+        ASPA_utilize = True
+        param.remove("utilize")
+
       if len(param) != 3 or not param[0].isdecimal() or not param[1].isdecimal() or not int(param[2]) == 1:
         raise LOTUSInputError
     except LOTUSInputError:
-      print("Usage: genOutsideAttack [via_asn] [target_asn] [hop_num=1]", file=sys.stderr)
+      print("Usage: genOutsideAttack [utilize] [via_asn] [target_asn] [hop_num=1]", file=sys.stderr)
       return
 
     via = param[0]
@@ -706,7 +729,15 @@ class Interpreter(Cmd):
 
     target_address = target_as_class.network_address
 
-    self.message_queue.put({"type": "update", "src": str(outside_as), "dst": str(via), "path": f"{outside_as}-{target}", "network": str(target_address)})
+    attack_path_list = []
+    if ASPA_utilize == True:
+      generated_path = self.chain_search_ASPA(target)
+      attack_path_list = [f"{outside_as}-{path}" for path in generated_path]
+    elif ASPA_utilize == False:
+      attack_path_list.append(f"{outside_as}-{target}")
+
+    for path in attack_path_list:
+      self.message_queue.put({"type": "update", "src": str(outside_as), "dst": str(via), "path": path, "network": str(target_address)})
 
   def do_autoASPA(self, line):
 

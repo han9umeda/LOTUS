@@ -1,0 +1,101 @@
+ASPA:
+  '100':
+  - '10'
+AS_list:
+- AS: '1'
+  network_address: 10.0.1.0/24
+  policy:
+  - aspv
+  - LocPrf
+  - PathLength
+  routing_table:
+    10.0.1.0/24:
+    - LocPrf: 1000
+      best_path: true
+      come_from: customer
+      path: i
+- AS: '10'
+  network_address: 10.0.2.0/24
+  policy:
+  - LocPrf
+  - PathLength
+  routing_table:
+    10.0.2.0/24:
+    - LocPrf: 1000
+      best_path: true
+      come_from: customer
+      path: i
+- AS: '11'
+  network_address: 10.0.3.0/24
+  policy:
+  - LocPrf
+  - PathLength
+  routing_table:
+    10.0.3.0/24:
+    - LocPrf: 1000
+      best_path: true
+      come_from: customer
+      path: i
+- AS: '12'
+  network_address: 10.0.4.0/24
+  policy:
+  - LocPrf
+  - PathLength
+  routing_table:
+    10.0.4.0/24:
+    - LocPrf: 1000
+      best_path: true
+      come_from: customer
+      path: i
+- AS: '100'
+  network_address: 10.0.5.0/24
+  policy:
+  - LocPrf
+  - PathLength
+  routing_table:
+    10.0.5.0/24:
+    - LocPrf: 1000
+      best_path: true
+      come_from: customer
+      path: i
+- AS: '200'
+  network_address: 10.0.6.0/24
+  policy:
+  - LocPrf
+  - PathLength
+  routing_table:
+    10.0.6.0/24:
+    - LocPrf: 1000
+      best_path: true
+      come_from: customer
+      path: i
+IP_gen_seed: 7
+connection:
+- dst: '10'
+  src: '1'
+  type: down
+- dst: '100'
+  src: '10'
+  type: down
+- dst: '200'
+  src: '10'
+  type: down
+- dst: '11'
+  src: '10'
+  type: peer
+- dst: '12'
+  src: '11'
+  type: peer
+message:
+- src: '1'
+  type: init
+- src: '10'
+  type: init
+- src: '11'
+  type: init
+- src: '12'
+  type: init
+- src: '100'
+  type: init
+- src: '200'
+  type: init
